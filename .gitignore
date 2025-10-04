@@ -205,3 +205,31 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Internal documentation
+internal_docs/
+
+# MedSearch specific
+logs/
+data/
+.env
+.env.local
+.env.production
+*.db
+*.db-journal
+
+# Elasticsearch data
+es_data/
+
+.augment/
+
+# Docker volumes
+docker-volumes/
+
+# Cloudflare tunnel
+cloudflared/
+*.json
+
+# AI model cache
+.cache/
+embeddings_cache/
