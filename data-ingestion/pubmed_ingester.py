@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import os
+import ssl
 import time
 import xml.etree.ElementTree as ET
 from typing import Any, Dict, List, Optional
@@ -70,7 +71,13 @@ class PubMedIngester:
             "api_key": self.api_key,
         }
 
-        async with aiohttp.ClientSession() as session:
+        # Create SSL context that doesn't verify certificates (for development)
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+
+        connector = aiohttp.TCPConnector(ssl=ssl_context)
+        async with aiohttp.ClientSession(connector=connector) as session:
             async with session.get(url, params=params) as response:
                 if response.status == 200:
                     data = await response.json()
@@ -102,7 +109,13 @@ class PubMedIngester:
             "api_key": self.api_key,
         }
 
-        async with aiohttp.ClientSession() as session:
+        # Create SSL context that doesn't verify certificates (for development)
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+
+        connector = aiohttp.TCPConnector(ssl=ssl_context)
+        async with aiohttp.ClientSession(connector=connector) as session:
             async with session.get(url, params=params) as response:
                 if response.status == 200:
                     xml_data = await response.text()

@@ -223,6 +223,7 @@ es_data/
 
 .augment/
 
+
 # Docker volumes
 docker-volumes/
 
@@ -233,3 +234,5 @@ cloudflared/
 # AI model cache
 .cache/
 embeddings_cache/
+
+medsearch-key.json

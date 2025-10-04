@@ -5,7 +5,7 @@ import time
 import uuid
 from typing import Any, Dict
 
-from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, HTTPException, Request, WebSocket, WebSocketDisconnect
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -25,7 +25,7 @@ limiter = Limiter(key_func=get_remote_address)
 
 @router.post("/search", response_model=SearchResponse)
 @limiter.limit("10/minute")
-async def create_search(request: SearchRequest) -> SearchResponse:
+async def create_search(request: Request, search_request: SearchRequest) -> SearchResponse:
     """
     Create a new search request.
 
@@ -45,8 +45,8 @@ async def create_search(request: SearchRequest) -> SearchResponse:
         db.create_search_session(
             session_id=search_id,
             user_id=user_id,
-            query=request.query,
-            conversation_id=request.context.conversation_id if request.context else None,
+            query=search_request.query,
+            conversation_id=search_request.context.conversation_id if search_request.context else None,
         )
 
         logger.info(f"Created search session: {search_id}")

@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import ssl
 import time
 from typing import Any, Dict, List, Optional
 
@@ -61,7 +62,13 @@ class ClinicalTrialsIngester:
         all_trials = []
         page_token = None
 
-        async with aiohttp.ClientSession() as session:
+        # Create SSL context that doesn't verify certificates (for development)
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+
+        connector = aiohttp.TCPConnector(ssl=ssl_context)
+        async with aiohttp.ClientSession(connector=connector) as session:
             while len(all_trials) < max_results:
                 params = {
                     "query.term": query,

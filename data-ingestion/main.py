@@ -179,7 +179,7 @@ async def ingest_all_data() -> Dict[str, Dict[str, int]]:
         )
 
         pubmed_stats = await pubmed_ingester.ingest(
-            query="(diabetes OR cancer OR hypertension OR alzheimer OR covid) AND (treatment OR therapy)",
+            query="diabetes treatment OR cancer therapy OR hypertension",
             max_articles=1000,
         )
         results["pubmed"] = pubmed_stats
