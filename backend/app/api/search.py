@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
+from app.agents.workflow import get_workflow
 from app.database import get_db
 from app.models.schemas import SearchRequest, SearchResponse, SearchResult
 from app.services.elasticsearch_service import get_elasticsearch_service
@@ -173,10 +174,9 @@ async def handle_search_start(
         )
 
         # Get services
-        es_service = await get_elasticsearch_service()
         redis_service = await get_redis_service()
-        vertex_ai_service = get_vertex_ai_service()
         db = get_db()
+        workflow = get_workflow()
 
         start_time = time.time()
 
@@ -194,55 +194,55 @@ async def handle_search_start(
             )
             return
 
-        # Generate query embedding
+        # Execute multi-agent workflow
         await connection_manager.send_search_progress(
-            user_id, search_id, "processing", "Generating query embedding...", 20, "Embedding"
+            user_id, search_id, "processing", "Executing multi-agent workflow...", 10, "Workflow"
         )
 
-        query_embedding = await vertex_ai_service.generate_embedding(query, "RETRIEVAL_QUERY")
+        try:
+            # Run the workflow
+            final_state = await workflow.execute(
+                query=query,
+                search_id=search_id,
+                user_id=user_id,
+                filters=filters,
+            )
 
-        # Search PubMed
-        await connection_manager.send_search_progress(
-            user_id, search_id, "processing", "Searching PubMed...", 40, "PubMed Search"
-        )
+            # Extract results from final state
+            final_response = final_state.get("final_response", "No results found.")
+            citations = final_state.get("citations", [])
+            confidence_score = final_state.get("confidence_score", 0.0)
+            agents_used = final_state.get("agents_used", [])
 
-        pubmed_results = await es_service.hybrid_search(
-            es_service.indices["pubmed"],
-            query,
-            query_embedding,
-            filters,
-            size=5,
-        )
+            execution_time = time.time() - start_time
 
-        # For now, create a simple response
-        # TODO: Implement multi-agent orchestration in Agent 3
-        final_response = f"Found {len(pubmed_results)} relevant articles in PubMed."
+            # Update database
+            db.update_search_session(
+                search_id,
+                status="completed",
+                final_response=final_response,
+                confidence_score=confidence_score,
+                execution_time=execution_time,
+                agents_used=agents_used,
+            )
 
-        execution_time = time.time() - start_time
+            # Cache result
+            result_to_cache = {
+                "final_response": final_response,
+                "citations": citations,
+                "confidence_score": confidence_score,
+                "execution_time": execution_time,
+            }
+            await redis_service.set_search_result(query, result_to_cache, filters)
 
-        # Update database
-        db.update_search_session(
-            search_id,
-            status="completed",
-            final_response=final_response,
-            confidence_score=0.8,
-            execution_time=execution_time,
-            agents_used=["research_agent"],
-        )
+            # Send completion
+            await connection_manager.send_search_complete(
+                user_id, search_id, final_response, citations, confidence_score, execution_time
+            )
 
-        # Cache result
-        result_to_cache = {
-            "final_response": final_response,
-            "citations": [],
-            "confidence_score": 0.8,
-            "execution_time": execution_time,
-        }
-        await redis_service.set_search_result(query, result_to_cache, filters)
-
-        # Send completion
-        await connection_manager.send_search_complete(
-            user_id, search_id, final_response, [], 0.8, execution_time
-        )
+        except Exception as workflow_error:
+            logger.error(f"Workflow execution failed: {workflow_error}")
+            raise
 
     except Exception as e:
         logger.error(f"Error handling search start: {e}")

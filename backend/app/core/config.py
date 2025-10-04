@@ -55,10 +55,13 @@ class Settings(BaseSettings):
     APP_RELOAD: bool = Field(default=True)
 
     # CORS Configuration
-    CORS_ORIGINS: List[str] = Field(
-        default=["http://localhost:3000", "http://localhost:80"]
-    )
+    CORS_ORIGINS: str = Field(default="http://localhost:3000,http://localhost:80")
     CORS_ALLOW_CREDENTIALS: bool = Field(default=True)
+
+    @property
+    def cors_origins_list(self) -> List[str]:
+        """Parse CORS_ORIGINS string into list."""
+        return [origin.strip() for origin in self.CORS_ORIGINS.split(",")]
 
     # Rate Limiting
     RATE_LIMIT_PER_MINUTE: int = Field(default=10)
