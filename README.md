@@ -202,11 +202,6 @@ npm run lint
 
 ## 📚 Documentation
 
-- [Product Requirements Document](internal_docs/medsearch-prd.md)
-- [Technical Specification](internal_docs/medsearch-technical-spec.md)
-- [VM Setup Guide](internal_docs/vm-setup.md)
-- [Data Sources Configuration](internal_docs/project_setup/data-sources.md)
-- [Agent Development Prompts](internal_docs/agent_prompts/)
 
 ---
 
