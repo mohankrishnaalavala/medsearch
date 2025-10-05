@@ -210,13 +210,21 @@ class MedSearchWorkflow:
             conversation_history = []
             messages = state.get("messages", [])
             for msg in messages:
-                if msg.get("role") == "user":
+                # Handle both dict and LangChain message objects
+                if isinstance(msg, dict):
+                    role = msg.get("role")
+                    content = msg.get("content", "")
+                else:
+                    # Skip non-dict messages (e.g., SystemMessage objects)
+                    continue
+
+                if role == "user":
                     conversation_history.append({
-                        "query": msg.get("content", ""),
+                        "query": content,
                         "response": ""
                     })
-                elif msg.get("role") == "assistant" and conversation_history:
-                    conversation_history[-1]["response"] = msg.get("content", "")
+                elif role == "assistant" and conversation_history:
+                    conversation_history[-1]["response"] = content
 
             synthesis = await synthesize_results(
                 query=state["query"],
