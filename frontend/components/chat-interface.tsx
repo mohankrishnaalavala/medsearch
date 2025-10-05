@@ -101,51 +101,34 @@ export function ChatInterface() {
         ]);
       });
 
-      // Handle agent progress
-      client.on('agent_progress', (message) => {
-        const data = message.data;
-        setAgents((prev) =>
-          prev.map((agent) =>
-            agent.name === data.agent_name
-              ? { ...agent, progress: data.progress, message: data.message }
-              : agent
-          )
-        );
+      // Handle search progress
+      client.on('search_progress', (message) => {
+        const data = message.payload;
+        console.debug('Search progress:', data);
+        // Update agent status based on current step
+        if (data.current_step) {
+          setAgents((prev) =>
+            prev.map((agent) => {
+              if (data.current_step.includes(agent.name.toLowerCase())) {
+                return { ...agent, status: 'active', progress: data.progress || 0 };
+              }
+              return agent;
+            })
+          );
+        }
       });
 
-      // Handle agent complete
-      client.on('agent_complete', (message) => {
-        const data = message.data;
-        setAgents((prev) =>
-          prev.map((agent) =>
-            agent.name === data.agent_name
-              ? {
-                  ...agent,
-                  status: 'complete',
-                  progress: 100,
-                  execution_time: data.execution_time,
-                }
-              : agent
-          )
-        );
-      });
-
-      // Handle citation found
-      client.on('citation_found', (message) => {
-        const citation: Citation = message.data;
-        setCitations((prev) => [...prev, citation]);
-      });
-
-      // Handle search result
-      client.on('search_result', (message) => {
-        const data = message.data;
+      // Handle search complete
+      client.on('search_complete', (message) => {
+        const data = message.payload;
+        console.debug('Search complete:', data);
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === response.search_id
               ? {
                   ...msg,
                   content: data.final_response,
-                  citations: citations,
+                  citations: data.citations || [],
                   isStreaming: false,
                 }
               : msg
@@ -156,15 +139,15 @@ export function ChatInterface() {
       });
 
       // Handle errors
-      client.on('error', (message) => {
-        const data = message.data;
+      client.on('search_error', (message) => {
+        const data = message.payload;
         console.error('WebSocket error:', data);
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === response.search_id
               ? {
                   ...msg,
-                  content: `Error: ${data.error}`,
+                  content: `Error: ${data.error || 'An error occurred during search'}`,
                   isStreaming: false,
                 }
               : msg
