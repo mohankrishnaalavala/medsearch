@@ -69,7 +69,7 @@ export function MessageBubble({ message, onCitationClick }: MessageBubbleProps) 
         )}
 
         <div className="mt-2 text-xs opacity-50">
-          {message.timestamp.toLocaleTimeString([], {
+          {new Date(message.timestamp).toLocaleTimeString([], {
             hour: '2-digit',
             minute: '2-digit',
           })}

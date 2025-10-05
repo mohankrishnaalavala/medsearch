@@ -320,10 +320,12 @@ class MedSearchWorkflow:
         # Execute with checkpointing
         config = {"configurable": {"thread_id": search_id}}
 
-        final_state = None
+        final_state = initial_state
         async for state in app.astream(initial_state, config):
-            final_state = state
-            logger.debug(f"Workflow state: {state}")
+            # astream returns dict with node name as key, extract the actual state
+            for node_name, node_state in state.items():
+                final_state.update(node_state)
+            logger.debug(f"Workflow state: {final_state}")
 
         return final_state
 
