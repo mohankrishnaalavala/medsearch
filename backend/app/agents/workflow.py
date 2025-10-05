@@ -103,14 +103,14 @@ class MedSearchWorkflow:
                 "current_step": "query_analysis_error",
             }
 
-    def _research_agent_node(self, state: AgentState) -> Dict[str, Any]:
+    async def _research_agent_node(self, state: AgentState) -> Dict[str, Any]:
         """Execute research agent for PubMed search."""
         from app.agents.research_agent import execute_research_agent
 
         logger.info("Executing research agent...")
 
         try:
-            results = execute_research_agent(
+            results = await execute_research_agent(
                 query=state["query"],
                 query_embedding=state.get("query_embedding"),
                 filters=state.get("filters"),
@@ -135,14 +135,14 @@ class MedSearchWorkflow:
                 "research_results": [],
             }
 
-    def _clinical_agent_node(self, state: AgentState) -> Dict[str, Any]:
+    async def _clinical_agent_node(self, state: AgentState) -> Dict[str, Any]:
         """Execute clinical trials agent."""
         from app.agents.clinical_agent import execute_clinical_agent
 
         logger.info("Executing clinical trials agent...")
 
         try:
-            results = execute_clinical_agent(
+            results = await execute_clinical_agent(
                 query=state["query"],
                 query_embedding=state.get("query_embedding"),
                 filters=state.get("filters"),
@@ -167,14 +167,14 @@ class MedSearchWorkflow:
                 "clinical_results": [],
             }
 
-    def _drug_agent_node(self, state: AgentState) -> Dict[str, Any]:
+    async def _drug_agent_node(self, state: AgentState) -> Dict[str, Any]:
         """Execute drug information agent."""
         from app.agents.drug_agent import execute_drug_agent
 
         logger.info("Executing drug information agent...")
 
         try:
-            results = execute_drug_agent(
+            results = await execute_drug_agent(
                 query=state["query"],
                 query_embedding=state.get("query_embedding"),
                 filters=state.get("filters"),
@@ -199,14 +199,14 @@ class MedSearchWorkflow:
                 "drug_results": [],
             }
 
-    def _synthesize_node(self, state: AgentState) -> Dict[str, Any]:
+    async def _synthesize_node(self, state: AgentState) -> Dict[str, Any]:
         """Synthesize results from all agents."""
         from app.agents.synthesis_agent import synthesize_results
 
         logger.info("Synthesizing results...")
 
         try:
-            synthesis = synthesize_results(
+            synthesis = await synthesize_results(
                 query=state["query"],
                 research_results=state.get("research_results", []),
                 clinical_results=state.get("clinical_results", []),
