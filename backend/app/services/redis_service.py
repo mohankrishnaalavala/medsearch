@@ -1,5 +1,6 @@
 """Redis service for caching."""
 
+import hashlib
 import json
 import logging
 from typing import Any, List, Optional
@@ -106,9 +107,11 @@ class RedisService:
             raise RuntimeError("Redis client not connected")
 
         try:
-            # Create cache key from query and filters
+            # Create cache key from query and filters using SHA256 to avoid hash collisions
             filter_str = json.dumps(filters, sort_keys=True) if filters else ""
-            key = f"search:{hash(query + filter_str)}"
+            cache_input = query + filter_str
+            key_hash = hashlib.sha256(cache_input.encode()).hexdigest()
+            key = f"search:{key_hash}"
 
             cached = await self.client.get(key)
 
@@ -138,9 +141,11 @@ class RedisService:
             raise RuntimeError("Redis client not connected")
 
         try:
-            # Create cache key from query and filters
+            # Create cache key from query and filters using SHA256 to avoid hash collisions
             filter_str = json.dumps(filters, sort_keys=True) if filters else ""
-            key = f"search:{hash(query + filter_str)}"
+            cache_input = query + filter_str
+            key_hash = hashlib.sha256(cache_input.encode()).hexdigest()
+            key = f"search:{key_hash}"
 
             await self.client.setex(
                 key, self.search_result_ttl, json.dumps(result)
