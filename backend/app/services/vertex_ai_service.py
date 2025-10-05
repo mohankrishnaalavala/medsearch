@@ -1,9 +1,12 @@
 """Vertex AI service for embeddings and chat completion."""
 
 import logging
+import os
 from typing import List, Optional
 
 import vertexai
+from google.auth import default
+from google.oauth2 import service_account
 from vertexai.generative_models import GenerativeModel
 from vertexai.language_models import TextEmbeddingInput, TextEmbeddingModel
 
@@ -25,10 +28,25 @@ class VertexAIService:
     def initialize(self) -> None:
         """Initialize Vertex AI and load models."""
         try:
-            # Initialize Vertex AI
+            # Load credentials from service account key file
+            credentials = None
+            credentials_path = settings.GOOGLE_APPLICATION_CREDENTIALS
+
+            if credentials_path and os.path.exists(credentials_path):
+                logger.info(f"Loading credentials from: {credentials_path}")
+                credentials = service_account.Credentials.from_service_account_file(
+                    credentials_path,
+                    scopes=["https://www.googleapis.com/auth/cloud-platform"]
+                )
+            else:
+                logger.warning(f"GOOGLE_APPLICATION_CREDENTIALS not set or file not found at {credentials_path}, using default credentials")
+                credentials, _ = default()
+
+            # Initialize Vertex AI with explicit credentials
             vertexai.init(
                 project=settings.GOOGLE_CLOUD_PROJECT,
                 location=settings.VERTEX_AI_LOCATION,
+                credentials=credentials,
             )
 
             # Load embedding model
