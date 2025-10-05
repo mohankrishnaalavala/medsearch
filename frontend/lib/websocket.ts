@@ -64,6 +64,7 @@ export class WebSocketClient {
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectDelay = 1000;
+  private shouldReconnect = true;
 
   constructor(searchId: string) {
     this.searchId = searchId;
@@ -115,6 +116,7 @@ export class WebSocketClient {
    * Disconnect from WebSocket
    */
   disconnect(): void {
+    this.shouldReconnect = false; // Prevent reconnection
     if (this.ws) {
       this.ws.close();
       this.ws = null;
@@ -164,12 +166,17 @@ export class WebSocketClient {
    * Handle reconnection
    */
   private handleReconnect(): void {
+    if (!this.shouldReconnect) {
+      console.debug('Reconnection disabled, not reconnecting');
+      return;
+    }
+
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
       const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
-      
+
       console.debug(`Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
-      
+
       setTimeout(() => {
         this.connect().catch(error => {
           console.error('Reconnection failed:', error);
