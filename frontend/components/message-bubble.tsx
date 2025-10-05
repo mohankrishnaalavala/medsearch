@@ -50,8 +50,8 @@ export function MessageBubble({ message, onCitationClick }: MessageBubbleProps) 
             <div className="flex flex-wrap gap-2">
               {message.citations.map((citation, index) => (
                 <button
-                  key={citation.citation_id}
-                  onClick={() => onCitationClick?.(citation.citation_id)}
+                  key={citation.citation_id || citation.id || `citation-${index}`}
+                  onClick={() => onCitationClick?.(citation.citation_id || citation.id)}
                   className={cn(
                     'inline-flex items-center gap-1 px-2 py-1 rounded text-xs',
                     'bg-background/50 hover:bg-background/80 transition-colors',

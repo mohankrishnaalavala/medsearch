@@ -149,6 +149,23 @@ async def synthesize_results(
 
     vertex_ai_service = get_vertex_ai_service()
 
+    # Handle None values
+    research_results = research_results or []
+    clinical_results = clinical_results or []
+    drug_results = drug_results or []
+
+    # Check if we have any results
+    total_results = len(research_results) + len(clinical_results) + len(drug_results)
+
+    if total_results == 0:
+        logger.warning("No results found from any agent")
+        return SynthesisOutput(
+            final_response="I apologize, but I couldn't find any relevant information in the medical databases for your query. This could be because:\n\n1. The topic is very specific or emerging\n2. The search terms didn't match indexed documents\n3. The information may be available under different terminology\n\nPlease try:\n- Rephrasing your question\n- Using different medical terms\n- Breaking down complex queries into simpler questions",
+            citations=[],
+            confidence_score=0.0,
+            key_findings=[],
+        )
+
     # Calculate confidence score
     confidence_score = calculate_confidence_score(
         research_results, clinical_results, drug_results
@@ -166,16 +183,20 @@ async def synthesize_results(
         # Generate synthesis using Vertex AI
         final_response = await vertex_ai_service.generate_chat_response(
             prompt=prompt,
-            system_instruction="""You are a medical research assistant. Synthesize the provided research findings into a clear, accurate, and helpful response.
+            system_instruction=f"""You are a medical research assistant. Synthesize the provided research findings to answer this specific question: "{query}"
 
-Guidelines:
+CRITICAL GUIDELINES:
+- Answer the SPECIFIC question asked - do not provide generic information
 - Be factual and cite sources using [1], [2], etc.
-- Highlight key findings and consensus
+- If the research doesn't directly answer the question, clearly state what information IS available
+- Highlight key findings relevant to the query
 - Note any conflicting information
 - Use clear, professional language
-- Keep response concise but comprehensive (3-5 paragraphs)
-- Do not make medical recommendations""",
-            temperature=0.3,
+- Keep response concise but comprehensive (2-4 paragraphs)
+- Do not make medical recommendations
+- Do NOT copy-paste generic responses - tailor your answer to the specific query
+- If you don't have enough information, say so clearly""",
+            temperature=0.5,
             max_output_tokens=2048,
             use_escalation=use_escalation,
         )

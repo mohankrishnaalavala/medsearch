@@ -222,7 +222,8 @@ data/
 es_data/
 
 .augment/
-
+frontend/node_modules/
+frontend/.next/
 
 # Docker volumes
 docker-volumes/
