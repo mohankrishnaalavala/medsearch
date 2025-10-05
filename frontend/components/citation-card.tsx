@@ -2,7 +2,7 @@
 
 import { Citation } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { ExternalLink, FileText, Flask, Pill } from 'lucide-react';
+import { ExternalLink, FileText, Beaker, Pill } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
@@ -19,7 +19,7 @@ export function CitationCard({ citation, index, expanded = false, onToggle }: Ci
       case 'pubmed':
         return <FileText className="w-4 h-4" />;
       case 'clinical_trial':
-        return <Flask className="w-4 h-4" />;
+        return <Beaker className="w-4 h-4" />;
       case 'drug_info':
         return <Pill className="w-4 h-4" />;
       default:
