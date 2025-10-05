@@ -93,7 +93,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(health.router, tags=["Health"])
-app.include_router(search.router, prefix="/api/v1", tags=["Search"])
+app.include_router(search.router, tags=["Search"])  # Remove prefix for WebSocket to work
 app.include_router(citations.router, prefix="/api/v1", tags=["Citations"])
 app.include_router(conversations.router, prefix="/api/v1", tags=["Conversations"])
 

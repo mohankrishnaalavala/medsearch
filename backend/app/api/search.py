@@ -23,7 +23,7 @@ router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
 
 
-@router.post("/search", response_model=SearchResponse)
+@router.post("/api/v1/search", response_model=SearchResponse)
 # @limiter.limit("10/minute")  # Temporarily disabled for testing
 async def create_search(search_request: SearchRequest) -> SearchResponse:
     """
@@ -63,7 +63,7 @@ async def create_search(search_request: SearchRequest) -> SearchResponse:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/search/{search_id}", response_model=SearchResult)
+@router.get("/api/v1/search/{search_id}", response_model=SearchResult)
 async def get_search_result(search_id: str) -> SearchResult:
     """
     Get search result by ID.
@@ -104,8 +104,8 @@ async def get_search_result(search_id: str) -> SearchResult:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.websocket("/ws/search")
-async def websocket_search_endpoint(websocket: WebSocket) -> None:
+@router.websocket("/ws/{search_id}")
+async def websocket_search_endpoint(websocket: WebSocket, search_id: str) -> None:
     """
     WebSocket endpoint for real-time search updates.
 
@@ -117,24 +117,46 @@ async def websocket_search_endpoint(websocket: WebSocket) -> None:
     # In production, extract from authentication
     user_id = "default_user"
 
+    # Connect (this will accept the WebSocket connection)
     connection_id = await connection_manager.connect(websocket, user_id)
 
+    logger.info(f"WebSocket connected: {connection_id} for search: {search_id}")
+
     try:
+        # Get database
+        db = get_db()
+
+        # Get search session to verify it exists
+        session = db.get_search_session(search_id)
+        if not session:
+            await websocket.send_json({
+                "type": "error",
+                "data": {"error": "Search not found", "details": f"Search ID {search_id} does not exist"},
+                "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+            })
+            await websocket.close()
+            return
+
+        # Get the query from the session
+        query = session["query"]
+
+        # Automatically start the search
+        await handle_search_start(
+            {"payload": {"query": query, "search_id": search_id, "filters": None}},
+            user_id,
+            connection_manager
+        )
+
+        # Keep connection alive and handle messages
         while True:
             # Receive message from client
             data = await websocket.receive_json()
 
             message_type = data.get("type")
 
-            if message_type == "search_start":
-                # Handle search start
-                await handle_search_start(data, user_id, connection_manager)
-
-            elif message_type == "search_cancel":
+            if message_type == "search_cancel":
                 # Handle search cancellation
-                search_id = data.get("payload", {}).get("search_id")
-                if search_id:
-                    await handle_search_cancel(search_id, user_id, connection_manager)
+                await handle_search_cancel(search_id, user_id, connection_manager)
 
             elif message_type == "keep_alive":
                 # Respond to keep-alive ping
