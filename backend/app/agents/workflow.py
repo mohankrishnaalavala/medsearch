@@ -1,7 +1,7 @@
 """LangGraph workflow orchestration for multi-agent system."""
 
 import logging
-from typing import Any, Dict, Literal
+from typing import Any, Dict, List, Literal
 
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
