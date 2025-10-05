@@ -97,7 +97,7 @@ class QueryAnalysisInput(BaseModel):
 
 class QueryAnalysisOutput(BaseModel):
     """Output from query analysis."""
-    
+
     intent: Literal["research", "clinical_trial", "drug_info", "general"] = Field(
         ..., description="Detected query intent"
     )
@@ -107,6 +107,9 @@ class QueryAnalysisOutput(BaseModel):
     confidence: float = Field(..., ge=0, le=1, description="Analysis confidence")
     suggested_agents: List[str] = Field(
         default_factory=list, description="Agents to execute"
+    )
+    expanded_query: Optional[str] = Field(
+        default=None, description="Expanded query for follow-up questions"
     )
 
 

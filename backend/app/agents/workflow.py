@@ -76,24 +76,33 @@ class MedSearchWorkflow:
 
         return workflow
 
-    def _analyze_query_node(self, state: AgentState) -> Dict[str, Any]:
+    async def _analyze_query_node(self, state: AgentState) -> Dict[str, Any]:
         """Analyze query to determine intent and extract entities."""
-        from app.agents.query_analyzer import analyze_query
+        from app.agents.query_analyzer import analyze_query_async
 
         logger.info(f"Analyzing query: {state['query'][:50]}...")
 
         try:
-            analysis = analyze_query(
+            # Build conversation context from messages
+            conversation_context = None
+            if state.get("messages"):
+                conversation_context = {"messages": state["messages"]}
+
+            analysis = await analyze_query_async(
                 query=state["query"],
-                conversation_context=None,  # TODO: Add conversation context
+                conversation_context=conversation_context,
             )
 
+            # Use expanded query if available (for follow-up questions)
+            effective_query = analysis.expanded_query or state["query"]
+
             return {
+                "query": effective_query,  # Update query with expanded version
                 "intent": analysis.intent,
                 "entities": analysis.entities,
                 "current_step": "query_analysis",
                 "progress": 10,
-                "messages": [{"role": "system", "content": f"Intent: {analysis.intent}"}],
+                "messages": [{"role": "system", "content": f"Intent: {analysis.intent}, Expanded: {effective_query}"}],
             }
 
         except Exception as e:
