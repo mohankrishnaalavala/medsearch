@@ -12,8 +12,8 @@ import { Loader2, Beaker } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('demo@medsearch.ai');
+  const [password, setPassword] = useState('demo123');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -61,7 +61,7 @@ export default function LoginPage() {
           </div>
           <CardTitle className="text-2xl text-center">Welcome back</CardTitle>
           <CardDescription className="text-center">
-            Enter your credentials to access your account
+            Demo credentials are pre-filled. Just click Sign In!
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
