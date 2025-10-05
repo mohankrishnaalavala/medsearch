@@ -206,12 +206,25 @@ class MedSearchWorkflow:
         logger.info("Synthesizing results...")
 
         try:
+            # Get conversation history from messages
+            conversation_history = []
+            messages = state.get("messages", [])
+            for msg in messages:
+                if msg.get("role") == "user":
+                    conversation_history.append({
+                        "query": msg.get("content", ""),
+                        "response": ""
+                    })
+                elif msg.get("role") == "assistant" and conversation_history:
+                    conversation_history[-1]["response"] = msg.get("content", "")
+
             synthesis = await synthesize_results(
                 query=state["query"],
                 research_results=state.get("research_results", []),
                 clinical_results=state.get("clinical_results", []),
                 drug_results=state.get("drug_results", []),
                 use_escalation=self.config.use_escalation_model,
+                conversation_history=conversation_history,
             )
 
             return {
@@ -277,7 +290,7 @@ class MedSearchWorkflow:
         return self.graph.compile(checkpointer=self.checkpointer)
 
     async def execute(
-        self, query: str, search_id: str, user_id: str, filters: Dict[str, Any] = None
+        self, query: str, search_id: str, user_id: str, filters: Dict[str, Any] = None, messages: List[Dict[str, str]] = None
     ) -> AgentState:
         """
         Execute the workflow for a search query.
@@ -287,6 +300,7 @@ class MedSearchWorkflow:
             search_id: Unique search identifier
             user_id: User identifier
             filters: Optional search filters
+            messages: Conversation history
 
         Returns:
             Final agent state with results
@@ -311,7 +325,7 @@ class MedSearchWorkflow:
             "errors": [],
             "current_step": None,
             "progress": 0,
-            "messages": [],
+            "messages": messages or [],
         }
 
         # Compile and execute workflow

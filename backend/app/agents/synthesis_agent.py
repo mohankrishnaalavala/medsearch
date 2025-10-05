@@ -131,6 +131,7 @@ async def synthesize_results(
     clinical_results: List[Dict[str, Any]],
     drug_results: List[Dict[str, Any]],
     use_escalation: bool = False,
+    conversation_history: List[Dict[str, str]] = None,
 ) -> SynthesisOutput:
     """
     Synthesize results from all agents into a coherent response.
@@ -141,11 +142,15 @@ async def synthesize_results(
         clinical_results: Results from clinical trials agent
         drug_results: Results from drug information agent
         use_escalation: Whether to use escalation model (Pro vs Flash)
+        conversation_history: Previous Q&A pairs for context
 
     Returns:
         Synthesized response with citations and confidence score
     """
     logger.info("Synthesizing results from all agents...")
+
+    # Handle conversation history
+    conversation_history = conversation_history or []
 
     vertex_ai_service = get_vertex_ai_service()
 
@@ -159,8 +164,14 @@ async def synthesize_results(
 
     if total_results == 0:
         logger.warning("No results found from any agent")
+
+        # Build context-aware no-results message
+        context_msg = ""
+        if conversation_history:
+            context_msg = f"\n\nNote: This is a follow-up to our previous conversation about {conversation_history[-1].get('query', 'your earlier question')}."
+
         return SynthesisOutput(
-            final_response="I apologize, but I couldn't find any relevant information in the medical databases for your query. This could be because:\n\n1. The topic is very specific or emerging\n2. The search terms didn't match indexed documents\n3. The information may be available under different terminology\n\nPlease try:\n- Rephrasing your question\n- Using different medical terms\n- Breaking down complex queries into simpler questions",
+            final_response=f"I apologize, but I couldn't find any relevant information in the medical databases for your query: \"{query}\".{context_msg}\n\nThis could be because:\n\n1. **Emerging or highly specific topic** - The research may not yet be indexed in our databases\n2. **Different terminology** - Medical terms vary; try alternative phrasing\n3. **Limited scope** - Our database contains {len(research_results)} PubMed articles, {len(clinical_results)} clinical trials, and {len(drug_results)} FDA drug entries\n\nSuggestions:\n- Rephrase using different medical terms\n- Break complex questions into simpler parts\n- Ask about related topics that might have more research\n- Try broader search terms first, then narrow down",
             citations=[],
             confidence_score=0.0,
             key_findings=[],
@@ -180,23 +191,41 @@ async def synthesize_results(
     )
 
     try:
+        # Build context from conversation history
+        context_section = ""
+        if conversation_history:
+            context_section = "\n\nCONVERSATION CONTEXT:\n"
+            for i, conv in enumerate(conversation_history[-3:], 1):  # Last 3 exchanges
+                context_section += f"Previous Q{i}: {conv.get('query', '')}\n"
+                context_section += f"Previous A{i}: {conv.get('response', '')[:200]}...\n\n"
+            context_section += f"Current question is a follow-up. Use this context to provide a coherent response.\n"
+
         # Generate synthesis using Vertex AI
         final_response = await vertex_ai_service.generate_chat_response(
-            prompt=prompt,
-            system_instruction=f"""You are a medical research assistant. Synthesize the provided research findings to answer this specific question: "{query}"
+            prompt=prompt + context_section,
+            system_instruction=f"""You are an intelligent medical research assistant. Answer this specific question: "{query}"
 
-CRITICAL GUIDELINES:
-- Answer the SPECIFIC question asked - do not provide generic information
-- Be factual and cite sources using [1], [2], etc.
-- If the research doesn't directly answer the question, clearly state what information IS available
-- Highlight key findings relevant to the query
-- Note any conflicting information
-- Use clear, professional language
-- Keep response concise but comprehensive (2-4 paragraphs)
-- Do not make medical recommendations
-- Do NOT copy-paste generic responses - tailor your answer to the specific query
-- If you don't have enough information, say so clearly""",
-            temperature=0.5,
+INTELLIGENCE GUIDELINES:
+1. **Be Specific**: Answer the EXACT question asked, not generic information
+2. **Handle Partial Data Intelligently**:
+   - If you have SOME relevant data, provide it and clearly state what's missing
+   - Example: "While I found information about X [1,2], I don't have specific data about Y in the current research"
+   - Offer related information that might be helpful
+3. **Cite Sources**: Use [1], [2], etc. for all factual claims
+4. **Be Honest About Limitations**:
+   - If no direct answer exists, say: "The available research doesn't directly address [specific aspect], but here's related information..."
+   - If data is limited, say: "Based on limited available research [1,2]..."
+   - If results are preliminary, mention: "Early research suggests [1], but more studies are needed"
+5. **Use Conversation Context**: If this is a follow-up question, reference previous discussion naturally
+6. **Provide Actionable Insights**:
+   - Summarize key findings
+   - Note consensus vs. conflicting evidence
+   - Highlight gaps in current research
+7. **Professional Tone**: Clear, concise (2-4 paragraphs), no medical advice
+8. **Avoid Repetition**: Each response should be unique and tailored to the specific query
+
+Remember: It's better to provide partial, accurate information with clear limitations than to give generic or irrelevant responses.""",
+            temperature=0.6,
             max_output_tokens=2048,
             use_escalation=use_escalation,
         )

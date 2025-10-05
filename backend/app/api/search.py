@@ -183,6 +183,7 @@ async def handle_search_start(
         query = payload.get("query")
         search_id = payload.get("search_id")
         filters = payload.get("filters")
+        messages = payload.get("messages", [])  # Get conversation history
 
         if not query or not search_id:
             await connection_manager.send_search_error(
@@ -228,6 +229,7 @@ async def handle_search_start(
                 search_id=search_id,
                 user_id=user_id,
                 filters=filters,
+                messages=messages,
             )
 
             # Extract results from final state

@@ -80,6 +80,9 @@ class SearchRequest(BaseModel):
 
     query: str = Field(..., min_length=1, max_length=500, description="Search query")
     filters: Optional[SearchFilters] = Field(default=None, description="Search filters")
+    messages: Optional[List[Dict[str, str]]] = Field(
+        default=None, description="Conversation history"
+    )
     context: Optional[ConversationContext] = Field(
         default=None, description="Conversation context"
     )

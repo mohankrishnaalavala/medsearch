@@ -7,6 +7,10 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 export interface SearchRequest {
   query: string;
   max_results?: number;
+  messages?: Array<{
+    role: 'user' | 'assistant';
+    content: string;
+  }>;
   context?: {
     conversation_id?: string;
     previous_queries?: string[];

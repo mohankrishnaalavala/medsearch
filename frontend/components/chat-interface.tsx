@@ -90,10 +90,17 @@ export function ChatInterface() {
     setCitations([]);
 
     try {
+      // Prepare conversation history (last 5 messages for context)
+      const conversationHistory = messages.slice(-10).map(msg => ({
+        role: msg.role,
+        content: msg.content,
+      }));
+
       // Create search request
       const response = await createSearch({
         query: userMessage.content,
         max_results: 10,
+        messages: conversationHistory,
       });
 
       // Create assistant message placeholder
