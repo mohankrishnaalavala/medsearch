@@ -156,8 +156,8 @@ async def synthesize_results(
         # Generate synthesis using Vertex AI
         final_response = await vertex_ai_service.generate_chat_response(
             prompt=prompt,
-            system_instruction="""You are a medical research assistant. Synthesize the provided research findings into a clear, accurate, and helpful response. 
-            
+            system_instruction="""You are a medical research assistant. Synthesize the provided research findings into a clear, accurate, and helpful response.
+
 Guidelines:
 - Be factual and cite sources using [1], [2], etc.
 - Highlight key findings and consensus
@@ -166,7 +166,7 @@ Guidelines:
 - Keep response concise but comprehensive (3-5 paragraphs)
 - Do not make medical recommendations""",
             temperature=0.3,
-            max_output_tokens=1000,
+            max_output_tokens=2048,
             use_escalation=use_escalation,
         )
 
