@@ -155,19 +155,26 @@ class RedisService:
         Invalidate search cache.
 
         Args:
-            pattern: Redis key pattern to invalidate
+            pattern: Redis key pattern to invalidate (can be exact key or pattern with *)
         """
         if not self.client:
             raise RuntimeError("Redis client not connected")
 
         try:
-            keys = []
-            async for key in self.client.scan_iter(match=pattern):
-                keys.append(key)
+            # If pattern contains *, use scan_iter
+            if "*" in pattern:
+                keys = []
+                async for key in self.client.scan_iter(match=pattern):
+                    keys.append(key)
 
-            if keys:
-                await self.client.delete(*keys)
-                logger.info(f"Invalidated {len(keys)} cache entries")
+                if keys:
+                    await self.client.delete(*keys)
+                    logger.info(f"Invalidated {len(keys)} cache entries matching pattern: {pattern}")
+            else:
+                # Direct key deletion
+                result = await self.client.delete(pattern)
+                if result:
+                    logger.info(f"Invalidated cache entry: {pattern}")
 
         except Exception as e:
             logger.error(f"Error invalidating cache: {e}")

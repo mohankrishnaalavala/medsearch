@@ -1,5 +1,6 @@
 """Search API endpoints."""
 
+import json
 import logging
 import time
 import uuid
@@ -203,19 +204,29 @@ async def handle_search_start(
 
         start_time = time.time()
 
-        # Check cache
+        # Check cache (only return if it's a successful result)
         cached_result = await redis_service.get_search_result(query, filters)
-        if cached_result:
-            logger.info(f"Returning cached result for: {query[:50]}...")
-            await connection_manager.send_search_complete(
-                user_id,
-                search_id,
-                cached_result["final_response"],
-                cached_result["citations"],
-                cached_result["confidence_score"],
-                cached_result["execution_time"],
-            )
-            return
+        if cached_result and cached_result.get("success", False):
+            # Validate cached data has required fields
+            if (
+                cached_result.get("final_response")
+                and cached_result.get("citations") is not None
+                and cached_result.get("confidence_score", 0) > 0
+            ):
+                logger.info(f"Returning cached result for: {query[:50]}...")
+                await connection_manager.send_search_complete(
+                    user_id,
+                    search_id,
+                    cached_result["final_response"],
+                    cached_result["citations"],
+                    cached_result["confidence_score"],
+                    cached_result["execution_time"],
+                )
+                return
+            else:
+                # Invalid cached data, invalidate it
+                logger.warning(f"Invalid cached data for query: {query[:50]}... - invalidating")
+                await redis_service.invalidate_search_cache(f"search:{hash(query + (json.dumps(filters, sort_keys=True) if filters else ''))}")
 
         # Execute multi-agent workflow
         await connection_manager.send_search_progress(
@@ -240,6 +251,16 @@ async def handle_search_start(
 
             execution_time = time.time() - start_time
 
+            # Determine if this is a successful result worth caching
+            is_successful = (
+                final_response
+                and final_response != "No results found."
+                and not final_response.startswith("An error occurred")
+                and not final_response.startswith("I apologize, but I couldn't find")
+                and confidence_score > 0
+                and len(citations) > 0
+            )
+
             # Update database
             db.update_search_session(
                 search_id,
@@ -250,14 +271,19 @@ async def handle_search_start(
                 agents_used=agents_used,
             )
 
-            # Cache result
-            result_to_cache = {
-                "final_response": final_response,
-                "citations": citations,
-                "confidence_score": confidence_score,
-                "execution_time": execution_time,
-            }
-            await redis_service.set_search_result(query, result_to_cache, filters)
+            # Only cache successful results with valid data
+            if is_successful:
+                result_to_cache = {
+                    "success": True,
+                    "final_response": final_response,
+                    "citations": citations,
+                    "confidence_score": confidence_score,
+                    "execution_time": execution_time,
+                }
+                await redis_service.set_search_result(query, result_to_cache, filters)
+                logger.info(f"Cached successful result for: {query[:50]}...")
+            else:
+                logger.info(f"Skipping cache for unsuccessful result: {query[:50]}...")
 
             # Send completion
             await connection_manager.send_search_complete(
