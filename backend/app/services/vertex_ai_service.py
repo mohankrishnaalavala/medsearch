@@ -171,16 +171,14 @@ class VertexAIService:
             }
 
             # Generate response
+            # Prepend system instruction to prompt if provided
+            full_prompt = prompt
             if system_instruction:
-                response = model.generate_content(
-                    prompt,
-                    generation_config=generation_config,
-                    system_instruction=system_instruction,
-                )
-            else:
-                response = model.generate_content(
-                    prompt, generation_config=generation_config
-                )
+                full_prompt = f"{system_instruction}\n\n{prompt}"
+
+            response = model.generate_content(
+                full_prompt, generation_config=generation_config
+            )
 
             if not response or not response.text:
                 raise ValueError("Failed to generate response")
