@@ -25,6 +25,11 @@ def calculate_confidence_score(
     Returns:
         Confidence score (0-1)
     """
+    # Handle None values
+    research_results = research_results or []
+    clinical_results = clinical_results or []
+    drug_results = drug_results or []
+
     total_results = len(research_results) + len(clinical_results) + len(drug_results)
 
     if total_results == 0:
@@ -66,6 +71,11 @@ def extract_citations(
     Returns:
         List of formatted citations
     """
+    # Handle None values
+    research_results = research_results or []
+    clinical_results = clinical_results or []
+    drug_results = drug_results or []
+
     citations = []
 
     # Add research citations
