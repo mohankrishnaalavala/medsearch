@@ -8,7 +8,7 @@ import { CitationCard } from './citation-card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, Loader2 } from 'lucide-react';
+import { Send, Loader2, Trash2 } from 'lucide-react';
 import { createSearch } from '@/lib/api';
 import { createWebSocketClient, WebSocketClient } from '@/lib/websocket';
 
@@ -20,9 +20,33 @@ export function ChatInterface() {
   const [citations, setCitations] = useState<Citation[]>([]);
   const [selectedCitation, setSelectedCitation] = useState<string | null>(null);
   const [wsClient, setWsClient] = useState<WebSocketClient | null>(null);
-  
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Load conversation history from localStorage on mount
+  useEffect(() => {
+    const savedMessages = localStorage.getItem('medsearch_conversation');
+    if (savedMessages) {
+      try {
+        const parsed = JSON.parse(savedMessages);
+        // Limit to last 20 messages
+        const recentMessages = parsed.slice(-20);
+        setMessages(recentMessages);
+      } catch (error) {
+        console.error('Failed to load conversation history:', error);
+      }
+    }
+  }, []);
+
+  // Save conversation history to localStorage when messages change
+  useEffect(() => {
+    if (messages.length > 0) {
+      // Limit to last 20 messages to avoid localStorage quota
+      const recentMessages = messages.slice(-20);
+      localStorage.setItem('medsearch_conversation', JSON.stringify(recentMessages));
+    }
+  }, [messages]);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -174,10 +198,37 @@ export function ChatInterface() {
     }
   };
 
+  const handleClearHistory = () => {
+    if (confirm('Are you sure you want to clear the conversation history?')) {
+      setMessages([]);
+      setCitations([]);
+      setAgents([]);
+      localStorage.removeItem('medsearch_conversation');
+    }
+  };
+
   return (
     <div className="flex h-screen bg-background">
       {/* Main chat area */}
       <div className="flex-1 flex flex-col">
+        {/* Header with Clear History button */}
+        {messages.length > 0 && (
+          <div className="border-b border-border p-4">
+            <div className="max-w-4xl mx-auto flex justify-between items-center">
+              <h2 className="text-lg font-semibold">Conversation History</h2>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleClearHistory}
+                className="gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                Clear History
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Messages */}
         <ScrollArea className="flex-1 p-4" ref={scrollRef}>
           <div className="max-w-4xl mx-auto space-y-4">
