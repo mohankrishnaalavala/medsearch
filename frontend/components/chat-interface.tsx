@@ -11,6 +11,24 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send, Loader2, Trash2 } from 'lucide-react';
 import { createSearch } from '@/lib/api';
 import { createWebSocketClient, WebSocketClient } from '@/lib/websocket';
+import type { WebSocketMessage } from '@/lib/websocket';
+
+// WS payload types and guards
+type SearchProgressPayload = { search_id: string; current_step?: string; progress?: number };
+type SearchCompletePayload = { search_id: string; final_response: string; citations?: Citation[] };
+type SearchErrorPayload = { search_id: string; error?: string };
+type AgentStartPayload = { agent_name: string; task: string };
+
+type UnknownObject = Record<string, unknown>;
+const extractPayload = (message: WebSocketMessage): unknown => (
+  typeof message.payload !== 'undefined' ? message.payload : message.data
+);
+const hasProp = (obj: unknown, prop: string): boolean => !!obj && typeof obj === 'object' && prop in (obj as UnknownObject);
+const isAgentStartPayload = (p: unknown): p is AgentStartPayload => hasProp(p, 'agent_name') && hasProp(p, 'task');
+const isSearchProgressPayload = (p: unknown): p is SearchProgressPayload => hasProp(p, 'search_id');
+const isSearchCompletePayload = (p: unknown): p is SearchCompletePayload => hasProp(p, 'search_id') && hasProp(p, 'final_response');
+const isSearchErrorPayload = (p: unknown): p is SearchErrorPayload => hasProp(p, 'search_id') && hasProp(p, 'error');
+
 
 export function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -71,7 +89,7 @@ export function ChatInterface() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!input.trim() || isLoading) {
       return;
     }
@@ -120,28 +138,31 @@ export function ChatInterface() {
 
       // Handle agent start
       client.on('agent_start', (message) => {
-        const data = message.data;
+        const payload = extractPayload(message);
+        if (!isAgentStartPayload(payload)) return;
         setAgents((prev) => [
           ...prev,
           {
-            name: data.agent_name,
+            name: payload.agent_name,
             status: 'running',
             progress: 0,
-            message: data.task,
+            message: payload.task,
           },
         ]);
       });
 
       // Handle search progress
       client.on('search_progress', (message) => {
-        const data = message.payload;
-        console.debug('Search progress:', data);
+        const payload = extractPayload(message);
+        if (!isSearchProgressPayload(payload)) return;
+        if (payload.search_id !== response.search_id) return; // ignore other sessions
+        console.debug('Search progress:', payload);
         // Update agent status based on current step
-        if (data.current_step) {
+        if (payload.current_step) {
           setAgents((prev) =>
             prev.map((agent) => {
-              if (data.current_step.includes(agent.name.toLowerCase())) {
-                return { ...agent, status: 'active', progress: data.progress || 0 };
+              if (payload.current_step && payload.current_step.includes(agent.name.toLowerCase())) {
+                return { ...agent, status: 'running', progress: payload.progress ?? 0 };
               }
               return agent;
             })
@@ -151,15 +172,17 @@ export function ChatInterface() {
 
       // Handle search complete
       client.on('search_complete', (message) => {
-        const data = message.payload;
-        console.debug('Search complete:', data);
+        const payload = extractPayload(message);
+        if (!isSearchCompletePayload(payload)) return;
+        if (payload.search_id !== response.search_id) return; // ignore other sessions
+        console.debug('Search complete:', payload);
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === response.search_id
               ? {
                   ...msg,
-                  content: data.final_response,
-                  citations: data.citations || [],
+                  content: payload.final_response,
+                  citations: payload.citations || [],
                   isStreaming: false,
                 }
               : msg
@@ -171,14 +194,16 @@ export function ChatInterface() {
 
       // Handle errors
       client.on('search_error', (message) => {
-        const data = message.payload;
-        console.error('WebSocket error:', data);
+        const payload = extractPayload(message);
+        if (!isSearchErrorPayload(payload)) return;
+        if (payload.search_id !== response.search_id) return; // ignore other sessions
+        console.error('WebSocket error:', payload);
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === response.search_id
               ? {
                   ...msg,
-                  content: `Error: ${data.error || 'An error occurred during search'}`,
+                  content: `Error: ${payload.error || 'An error occurred during search'}`,
                   isStreaming: false,
                 }
               : msg

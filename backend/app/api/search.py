@@ -51,6 +51,8 @@ async def create_search(search_request: SearchRequest) -> SearchResponse:
         )
 
         logger.info(f"Created search session: {search_id}")
+        logger.debug(f"Search query: {search_request.query[:100]}")
+
 
         return SearchResponse(
             search_id=search_id,
@@ -140,6 +142,8 @@ async def websocket_search_endpoint(websocket: WebSocket, search_id: str) -> Non
 
         # Get the query from the session
         query = session["query"]
+        logger.info(f"Starting workflow for search_id={search_id}, query={query[:80]}...")
+
 
         # Automatically start the search
         await handle_search_start(

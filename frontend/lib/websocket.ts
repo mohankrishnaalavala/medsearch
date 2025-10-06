@@ -4,18 +4,23 @@
 
 const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000';
 
-export type MessageType = 
+export type MessageType =
+  | '*'
   | 'agent_start'
   | 'agent_progress'
   | 'agent_complete'
   | 'search_result'
   | 'citation_found'
+  | 'search_progress'
+  | 'search_complete'
+  | 'search_error'
   | 'error';
 
 export interface WebSocketMessage {
-  type: MessageType;
-  data: any;
-  timestamp: string;
+  type: string; // backend may send additional types
+  payload?: unknown; // backend sends 'payload'
+  data?: unknown;    // legacy shape
+  timestamp?: string;
 }
 
 export interface AgentStartMessage {
@@ -55,6 +60,22 @@ export interface ErrorMessage {
   details?: string;
 }
 
+
+// Utility types and helpers to avoid `any`
+type UnknownObject = Record<string, unknown>;
+
+function extractPayload(msg: WebSocketMessage): unknown {
+  return typeof msg.payload !== 'undefined' ? msg.payload : msg.data;
+}
+
+function getSearchIdFromPayload(payload: unknown): string | undefined {
+  if (payload && typeof payload === 'object' && 'search_id' in payload) {
+    const sid = (payload as UnknownObject).search_id;
+    return typeof sid === 'string' ? sid : undefined;
+  }
+  return undefined;
+}
+
 export type MessageHandler = (message: WebSocketMessage) => void;
 
 export class WebSocketClient {
@@ -78,7 +99,7 @@ export class WebSocketClient {
       try {
         const url = `${WS_BASE_URL}/ws/${this.searchId}`;
         console.debug('Connecting to WebSocket:', url);
-        
+
         this.ws = new WebSocket(url);
 
         this.ws.onopen = () => {
@@ -150,15 +171,27 @@ export class WebSocketClient {
    * Handle incoming message
    */
   private handleMessage(message: WebSocketMessage): void {
-    const handlers = this.handlers.get(message.type);
-    if (handlers) {
-      handlers.forEach(handler => handler(message));
-    }
+    try {
+      // Filter by search_id if present to avoid cross-talk across searches
+      const payload = extractPayload(message);
+      const targetSearchId = getSearchIdFromPayload(payload);
+      if (targetSearchId && targetSearchId !== this.searchId) {
+        console.debug('Ignoring WS message for different search_id', { targetSearchId, current: this.searchId, type: message.type });
+        return;
+      }
 
-    // Also call handlers registered for all message types
-    const allHandlers = this.handlers.get('*' as MessageType);
-    if (allHandlers) {
-      allHandlers.forEach(handler => handler(message));
+      const handlers = this.handlers.get(message.type as MessageType);
+      if (handlers) {
+        handlers.forEach(handler => handler(message));
+      }
+
+      // Also call handlers registered for all message types
+      const allHandlers = this.handlers.get('*');
+      if (allHandlers) {
+        allHandlers.forEach(handler => handler(message));
+      }
+    } catch (err) {
+      console.error('Failed to handle WS message', { err });
     }
   }
 

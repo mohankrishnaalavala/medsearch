@@ -17,8 +17,9 @@ COPY . .
 
 # Set environment variables for build
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV NEXT_PUBLIC_API_URL=http://api:8000
-ENV NEXT_PUBLIC_WS_URL=ws://api:8000
+# For browser clients hitting the host-mapped API port during local docker-compose
+ENV NEXT_PUBLIC_API_URL=http://localhost:8000
+ENV NEXT_PUBLIC_WS_URL=ws://localhost:8000
 
 RUN npm run build
 
