@@ -10,7 +10,7 @@ import { ConversationsSidebar } from './conversations-sidebar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, Loader2, Trash2 } from 'lucide-react';
+import { Send, Loader2, Trash2, Paperclip, Mic } from 'lucide-react';
 import { createSearch } from '@/lib/api';
 import { createWebSocketClient, WebSocketClient } from '@/lib/websocket';
 import type { WebSocketMessage } from '@/lib/websocket';
@@ -271,6 +271,16 @@ export function ChatInterface() {
 
       {/* Main chat area */}
       <div className="flex-1 flex flex-col">
+        {/* Status toolbar */}
+        <div className="border-b border-border/70 bg-white/70">
+          <div className="max-w-4xl mx-auto px-4 h-10 flex items-center justify-end gap-3 text-xs">
+            <span className="inline-flex items-center gap-2 text-muted-foreground">
+              <span className="inline-block w-2 h-2 rounded-full bg-green-500" aria-hidden />
+              All Systems Operational
+            </span>
+          </div>
+        </div>
+
         {/* Header with Clear History button */}
         {messages.length > 0 && (
           <div className="border-b border-border p-4 bg-white/70">
@@ -338,7 +348,7 @@ export function ChatInterface() {
         {/* Input */}
         <div className="border-t border-border p-4 bg-white/70">
           <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-center">
               <Input
                 ref={inputRef}
                 value={input}
@@ -346,8 +356,29 @@ export function ChatInterface() {
                 placeholder="Ask about treatments, clinical trials, drug interactions..."
                 disabled={isLoading}
                 className="flex-1"
+                aria-label="Query input"
               />
-              <Button type="submit" disabled={isLoading || !input.trim()}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Attach file"
+                onClick={() => console.debug('attach_clicked')}
+                disabled={isLoading}
+              >
+                <Paperclip className="w-4 h-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Voice input"
+                onClick={() => console.debug('mic_clicked')}
+                disabled={isLoading}
+              >
+                <Mic className="w-4 h-4" />
+              </Button>
+              <Button type="submit" disabled={isLoading || !input.trim()} aria-label="Send">
                 {isLoading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
