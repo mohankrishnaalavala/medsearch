@@ -175,21 +175,65 @@ class PubMedIngester:
             journal_elem = article_elem.find(".//Journal/Title")
             journal = journal_elem.text if journal_elem is not None else ""
 
-            # Publication date
+            # Publication date (normalize to supported formats)
             pub_date_elem = article_elem.find(".//PubDate")
             pub_date = ""
             if pub_date_elem is not None:
-                year = pub_date_elem.find("Year")
-                month = pub_date_elem.find("Month")
-                day = pub_date_elem.find("Day")
-                parts = []
-                if year is not None:
-                    parts.append(year.text)
-                if month is not None:
-                    parts.append(month.text)
-                if day is not None:
-                    parts.append(day.text)
-                pub_date = "-".join(parts)
+                year_el = pub_date_elem.find("Year")
+                month_el = pub_date_elem.find("Month")
+                day_el = pub_date_elem.find("Day")
+
+                year = (year_el.text or "").strip() if year_el is not None else ""
+                month_raw = (month_el.text or "").strip() if month_el is not None else ""
+                day_raw = (day_el.text or "").strip() if day_el is not None else ""
+
+                # Map month short/long names to MM
+                MONTH_MAP = {
+                    "Jan": "01", "January": "01",
+                    "Feb": "02", "February": "02",
+                    "Mar": "03", "March": "03",
+                    "Apr": "04", "April": "04",
+                    "May": "05",
+                    "Jun": "06", "June": "06",
+                    "Jul": "07", "July": "07",
+                    "Aug": "08", "August": "08",
+                    "Sep": "09", "Sept": "09", "September": "09",
+                    "Oct": "10", "October": "10",
+                    "Nov": "11", "November": "11",
+                    "Dec": "12", "December": "12",
+                }
+
+                def normalize_month(s: str) -> str:
+                    if not s:
+                        return ""
+                    if s in MONTH_MAP:
+                        return MONTH_MAP[s]
+                    # Numeric month like "7" or "07"
+                    if s.isdigit():
+                        m = int(s)
+                        if 1 <= m <= 12:
+                            return f"{m:02d}"
+                    return ""
+
+                def normalize_day(s: str) -> str:
+                    if not s:
+                        return ""
+                    # Sometimes day is like "09" or "9"
+                    if s.isdigit():
+                        d = int(s)
+                        if 1 <= d <= 31:
+                            return f"{d:02d}"
+                    return ""
+
+                mm = normalize_month(month_raw)
+                dd = normalize_day(day_raw)
+
+                if year and mm and dd:
+                    pub_date = f"{year}-{mm}-{dd}"
+                elif year and mm:
+                    pub_date = f"{year}-{mm}"
+                elif year:
+                    pub_date = year
 
             # DOI
             doi = None

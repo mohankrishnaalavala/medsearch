@@ -5,6 +5,7 @@ import { Message, Citation, AgentStatus as AgentStatusType } from '@/lib/types';
 import { MessageBubble } from './message-bubble';
 import { AgentStatus } from './agent-status';
 import { CitationCard } from './citation-card';
+import { CitationDrawer } from './citation-drawer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -30,6 +31,15 @@ const isSearchCompletePayload = (p: unknown): p is SearchCompletePayload => hasP
 const isSearchErrorPayload = (p: unknown): p is SearchErrorPayload => hasProp(p, 'search_id') && hasProp(p, 'error');
 
 
+// Known agents shown in the status panel
+const KNOWN_AGENTS: AgentStatusType[] = [
+  { name: 'Query Analyzer', status: 'idle', progress: 0, message: 'Waiting' },
+  { name: 'Research Agent', status: 'idle', progress: 0, message: 'Waiting' },
+  { name: 'Clinical Trials Agent', status: 'idle', progress: 0, message: 'Waiting' },
+  { name: 'Drug Agent', status: 'idle', progress: 0, message: 'Waiting' },
+  { name: 'Synthesis Agent', status: 'idle', progress: 0, message: 'Waiting' },
+];
+
 export function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -37,7 +47,11 @@ export function ChatInterface() {
   const [agents, setAgents] = useState<AgentStatusType[]>([]);
   const [citations, setCitations] = useState<Citation[]>([]);
   const [selectedCitation, setSelectedCitation] = useState<string | null>(null);
+  const [isCitationOpen, setIsCitationOpen] = useState<boolean>(false);
   const [wsClient, setWsClient] = useState<WebSocketClient | null>(null);
+
+  const [overallProgress, setOverallProgress] = useState(0);
+  const [currentStep, setCurrentStep] = useState<string | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -104,7 +118,7 @@ export function ChatInterface() {
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
-    setAgents([]);
+    setAgents(KNOWN_AGENTS);
     setCitations([]);
 
     try {
@@ -140,15 +154,17 @@ export function ChatInterface() {
       client.on('agent_start', (message) => {
         const payload = extractPayload(message);
         if (!isAgentStartPayload(payload)) return;
-        setAgents((prev) => [
-          ...prev,
-          {
-            name: payload.agent_name,
-            status: 'running',
-            progress: 0,
-            message: payload.task,
-          },
-        ]);
+        setAgents((prev) => {
+          const exists = prev.some(a => a.name === payload.agent_name);
+          const updated = prev.map(a => (
+            a.name === payload.agent_name
+              ? ({ ...a, status: 'running' as const, message: payload.task, progress: 0 })
+              : a
+          ));
+          return exists
+            ? updated
+            : [...prev, { name: payload.agent_name, status: 'running' as const, progress: 0, message: payload.task }];
+        });
       });
 
       // Handle search progress
@@ -157,6 +173,9 @@ export function ChatInterface() {
         if (!isSearchProgressPayload(payload)) return;
         if (payload.search_id !== response.search_id) return; // ignore other sessions
         console.debug('Search progress:', payload);
+        // Update overall progress and step label
+        if (typeof payload.progress === 'number') setOverallProgress(payload.progress);
+        if (payload.current_step) setCurrentStep(payload.current_step);
         // Update agent status based on current step
         if (payload.current_step) {
           setAgents((prev) =>
@@ -188,6 +207,11 @@ export function ChatInterface() {
               : msg
           )
         );
+        // Sync citations sidebar for quick access
+        setCitations(payload.citations || []);
+        // Mark progress complete
+        setOverallProgress(100);
+        setCurrentStep('complete');
         setIsLoading(false);
         client.disconnect();
       });
@@ -249,6 +273,7 @@ export function ChatInterface() {
             <div className="max-w-4xl mx-auto flex justify-between items-center">
               <h2 className="text-lg font-semibold">Conversation History</h2>
               <Button
+
                 variant="outline"
                 size="sm"
                 onClick={handleClearHistory}
@@ -277,9 +302,31 @@ export function ChatInterface() {
               <MessageBubble
                 key={message.id}
                 message={message}
-                onCitationClick={setSelectedCitation}
+                onCitationClick={(id) => { setSelectedCitation(id); setIsCitationOpen(true); }}
               />
             ))}
+
+        {/* Search progress bar */}
+        {isLoading && (
+          <div className="border-b border-border/60 bg-muted/30">
+            <div className="max-w-4xl mx-auto py-2 px-4">
+              <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                <span>{currentStep ? currentStep : 'processing...'}</span>
+                <span>{overallProgress}%</span>
+              </div>
+              <div className="h-2 w-full rounded bg-muted">
+                <div
+                  className="h-2 rounded bg-primary transition-all"
+                  style={{ width: `${Math.max(0, Math.min(100, overallProgress))}%` }}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={overallProgress}
+                  role="progressbar"
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
             {agents.length > 0 && <AgentStatus agents={agents} />}
           </div>
@@ -320,16 +367,23 @@ export function ChatInterface() {
                 citation={citation}
                 index={index + 1}
                 expanded={selectedCitation === citation.citation_id}
-                onToggle={() =>
-                  setSelectedCitation(
-                    selectedCitation === citation.citation_id ? null : citation.citation_id
-                  )
-                }
+                onToggle={() => {
+                  const newId = selectedCitation === citation.citation_id ? null : citation.citation_id;
+                  setSelectedCitation(newId);
+                  setIsCitationOpen(!!newId);
+                }}
               />
             ))}
           </div>
         </div>
       )}
+
+      {/* Citation Drawer */}
+      <CitationDrawer
+        open={isCitationOpen}
+        citation={selectedCitation ? citations.find(c => c.citation_id === selectedCitation) ?? null : null}
+        onClose={() => setIsCitationOpen(false)}
+      />
     </div>
   );
 }
