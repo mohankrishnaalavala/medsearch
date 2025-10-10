@@ -1,0 +1,89 @@
+name: Deploy MedSearch to GCE
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  VM_NAME: medsearch-vm
+  ZONE: us-central1-a
+  REGISTRY: gcr.io
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Google Cloud CLI
+      uses: google-github-actions/setup-gcloud@v2
+      with:
+        service_account_key: ${{ secrets.GCP_SA_KEY }}
+        project_id: ${{ secrets.GCP_PROJECT_ID }}
+        export_default_credentials: true
+        
+    - name: Configure Docker for GCR
+      run: |
+        gcloud auth configure-docker
+        
+    - name: Build and push API Docker image
+      run: |
+        docker build -t $REGISTRY/$PROJECT_ID/medsearch-api:$GITHUB_SHA ./backend
+        docker push $REGISTRY/$PROJECT_ID/medsearch-api:$GITHUB_SHA
+        docker tag $REGISTRY/$PROJECT_ID/medsearch-api:$GITHUB_SHA $REGISTRY/$PROJECT_ID/medsearch-api:latest
+        docker push $REGISTRY/$PROJECT_ID/medsearch-api:latest
+        
+    - name: Build and push Frontend Docker image
+      run: |
+        docker build -t $REGISTRY/$PROJECT_ID/medsearch-frontend:$GITHUB_SHA ./frontend
+        docker push $REGISTRY/$PROJECT_ID/medsearch-frontend:$GITHUB_SHA
+        docker tag $REGISTRY/$PROJECT_ID/medsearch-frontend:$GITHUB_SHA $REGISTRY/$PROJECT_ID/medsearch-frontend:latest
+        docker push $REGISTRY/$PROJECT_ID/medsearch-frontend:latest
+        
+    - name: Copy deployment files to VM
+      run: |
+        gcloud compute scp docker-compose.prod.yml $VM_NAME:~/medsearch/ --zone=$ZONE
+        gcloud compute scp nginx.conf $VM_NAME:~/medsearch/ --zone=$ZONE
+        gcloud compute scp .env.production $VM_NAME:~/medsearch/.env --zone=$ZONE
+        
+    - name: Deploy to VM
+      run: |
+        gcloud compute ssh $VM_NAME --zone=$ZONE --command="
+          cd ~/medsearch
+          export API_IMAGE=$REGISTRY/$PROJECT_ID/medsearch-api:$GITHUB_SHA
+          export FRONTEND_IMAGE=$REGISTRY/$PROJECT_ID/medsearch-frontend:$GITHUB_SHA
+          export ELASTICSEARCH_PASSWORD=\$(cat .env | grep ELASTICSEARCH_PASSWORD | cut -d '=' -f2)
+          export GOOGLE_CLOUD_PROJECT=\$(cat .env | grep GOOGLE_CLOUD_PROJECT | cut -d '=' -f2)
+          
+          # Pull latest images
+          docker pull \$API_IMAGE
+          docker pull \$FRONTEND_IMAGE
+          
+          # Stop and remove old containers
+          docker-compose -f docker-compose.prod.yml down
+          
+          # Start new containers
+          docker-compose -f docker-compose.prod.yml up -d
+          
+          # Clean up old images
+          docker system prune -f
+        "
+        
+    - name: Health check
+      run: |
+        sleep 60
+        VM_IP=$(gcloud compute instances describe $VM_NAME --zone=$ZONE --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
+        curl -f http://$VM_IP/health || exit 1
+        
+    - name: Deployment summary
+      run: |
+        VM_IP=$(gcloud compute instances describe $VM_NAME --zone=$ZONE --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
+        echo "✅ Deployment successful!"
+        echo "🌐 Application URL: http://$VM_IP"
+        echo "📊 API Health: http://$VM_IP/health"
+        echo "📚 API Docs: http://$VM_IP/docs"
+

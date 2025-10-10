@@ -1,0 +1,15 @@
+# Data Ingestion Dependencies
+
+# Google Cloud
+google-cloud-aiplatform==1.68.0
+google-auth==2.34.0
+
+# Elasticsearch
+elasticsearch==8.15.1
+
+# HTTP client
+aiohttp==3.10.5
+
+# Environment variables
+python-dotenv==1.0.1
+
