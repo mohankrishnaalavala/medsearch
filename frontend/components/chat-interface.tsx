@@ -6,6 +6,7 @@ import { MessageBubble } from './message-bubble';
 import { AgentStatus } from './agent-status';
 import { CitationCard } from './citation-card';
 import { CitationDrawer } from './citation-drawer';
+import { ConversationsSidebar } from './conversations-sidebar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -265,15 +266,17 @@ export function ChatInterface() {
 
   return (
     <div className="flex h-screen bg-background">
+      {/* Left conversations sidebar */}
+      <ConversationsSidebar />
+
       {/* Main chat area */}
       <div className="flex-1 flex flex-col">
         {/* Header with Clear History button */}
         {messages.length > 0 && (
-          <div className="border-b border-border p-4">
+          <div className="border-b border-border p-4 bg-white/70">
             <div className="max-w-4xl mx-auto flex justify-between items-center">
               <h2 className="text-lg font-semibold">Conversation History</h2>
               <Button
-
                 variant="outline"
                 size="sm"
                 onClick={handleClearHistory}
@@ -306,41 +309,41 @@ export function ChatInterface() {
               />
             ))}
 
-        {/* Search progress bar */}
-        {isLoading && (
-          <div className="border-b border-border/60 bg-muted/30">
-            <div className="max-w-4xl mx-auto py-2 px-4">
-              <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-                <span>{currentStep ? currentStep : 'processing...'}</span>
-                <span>{overallProgress}%</span>
+            {/* Search progress bar */}
+            {isLoading && (
+              <div className="border-b border-border/60 bg-blue-50/70">
+                <div className="max-w-4xl mx-auto py-2 px-4">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                    <span>{currentStep ? currentStep : 'processing...'}</span>
+                    <span>{overallProgress}%</span>
+                  </div>
+                  <div className="h-2 w-full rounded bg-muted">
+                    <div
+                      className="h-2 rounded bg-primary transition-all"
+                      style={{ width: `${Math.max(0, Math.min(100, overallProgress))}%` }}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={overallProgress}
+                      role="progressbar"
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="h-2 w-full rounded bg-muted">
-                <div
-                  className="h-2 rounded bg-primary transition-all"
-                  style={{ width: `${Math.max(0, Math.min(100, overallProgress))}%` }}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-valuenow={overallProgress}
-                  role="progressbar"
-                />
-              </div>
-            </div>
-          </div>
-        )}
+            )}
 
             {agents.length > 0 && <AgentStatus agents={agents} />}
           </div>
         </ScrollArea>
 
         {/* Input */}
-        <div className="border-t border-border p-4">
+        <div className="border-t border-border p-4 bg-white/70">
           <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
             <div className="flex gap-2">
               <Input
                 ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask about medical research..."
+                placeholder="Ask about treatments, clinical trials, drug interactions..."
                 disabled={isLoading}
                 className="flex-1"
               />
@@ -356,27 +359,28 @@ export function ChatInterface() {
         </div>
       </div>
 
-      {/* Citations sidebar */}
-      {citations.length > 0 && (
-        <div className="w-80 border-l border-border p-4 overflow-y-auto">
-          <h3 className="text-lg font-semibold mb-4">Citations ({citations.length})</h3>
-          <div className="space-y-3">
-            {citations.map((citation, index) => (
-              <CitationCard
-                key={citation.citation_id}
-                citation={citation}
-                index={index + 1}
-                expanded={selectedCitation === citation.citation_id}
-                onToggle={() => {
-                  const newId = selectedCitation === citation.citation_id ? null : citation.citation_id;
-                  setSelectedCitation(newId);
-                  setIsCitationOpen(!!newId);
-                }}
-              />
-            ))}
-          </div>
+      {/* Right citations sidebar */}
+      <div className="hidden lg:block w-80 border-l border-border p-4 overflow-y-auto">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold">Active Citations</h3>
+          <span className="text-xs text-muted-foreground">{citations.length} sources</span>
         </div>
-      )}
+        <div className="space-y-3">
+          {citations.map((citation, index) => (
+            <CitationCard
+              key={citation.citation_id}
+              citation={citation}
+              index={index + 1}
+              expanded={selectedCitation === citation.citation_id}
+              onToggle={() => {
+                const newId = selectedCitation === citation.citation_id ? null : citation.citation_id;
+                setSelectedCitation(newId);
+                setIsCitationOpen(!!newId);
+              }}
+            />
+          ))}
+        </div>
+      </div>
 
       {/* Citation Drawer */}
       <CitationDrawer
