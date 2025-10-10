@@ -32,7 +32,12 @@ export const ConversationsSidebar: FC = () => {
       <ScrollArea className="flex-1">
         <div className="p-3 space-y-2">
           {items.map((it) => (
-            <button key={it.id} className="w-full text-left rounded-lg border hover:bg-muted/50 p-3">
+            <button
+              key={it.id}
+              className="w-full text-left rounded-lg border hover:bg-muted/50 p-3"
+              aria-label={`Open conversation: ${it.title}`}
+              onClick={() => console.debug('conversation_open', it.id)}
+            >
               <div className="text-sm font-medium line-clamp-1">{it.title}</div>
               {it.subtitle && (
                 <div className="text-xs text-muted-foreground line-clamp-1">{it.subtitle}</div>
