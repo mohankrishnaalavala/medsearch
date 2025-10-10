@@ -3,8 +3,6 @@
 import { ChatInterface } from '@/components/chat-interface';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { LogOut, User } from 'lucide-react';
 
 export default function Home() {
   const router = useRouter();
@@ -30,11 +28,6 @@ export default function Home() {
     }
   }, [router]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('medsearch_user');
-    router.push('/login');
-  };
-
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -47,24 +40,7 @@ export default function Home() {
   }
 
   return (
-    <div className="relative h-screen">
-      {/* Header with user info and logout */}
-      <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-background/80 backdrop-blur-sm border border-border/50">
-          <User className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-medium">{user.name}</span>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleLogout}
-          className="gap-2"
-        >
-          <LogOut className="h-4 w-4" />
-          Logout
-        </Button>
-      </div>
-
+    <div className="relative h-full">
       <ChatInterface />
     </div>
   );

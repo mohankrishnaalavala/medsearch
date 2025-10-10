@@ -24,26 +24,26 @@ export const ConversationsSidebar: FC = () => {
   );
 
   return (
-    <aside className="hidden md:flex w-72 shrink-0 border-r border-border flex-col">
-      <div className="p-3 border-b">
-        <h2 className="text-sm font-medium mb-2">Conversations</h2>
-        <Input placeholder="Search conversations..." className="h-9" />
+    <aside className="hidden md:flex w-64 shrink-0 border-r border-border flex-col bg-sidebar">
+      <div className="p-4 border-b border-sidebar-border">
+        <h2 className="text-sm font-semibold mb-3">Conversations</h2>
+        <Input placeholder="Search..." className="h-9 bg-background" />
       </div>
       <ScrollArea className="flex-1">
-        <div className="p-3 space-y-2">
+        <div className="p-2 space-y-1">
           {items.map((it) => (
             <button
               key={it.id}
-              className="w-full text-left rounded-lg border hover:bg-muted/50 p-3"
+              className="w-full text-left rounded-md hover:bg-sidebar-accent transition-colors p-3"
               aria-label={`Open conversation: ${it.title}`}
               onClick={() => console.debug('conversation_open', it.id)}
             >
-              <div className="text-sm font-medium line-clamp-1">{it.title}</div>
+              <div className="text-sm font-medium line-clamp-1 text-sidebar-foreground">{it.title}</div>
               {it.subtitle && (
-                <div className="text-xs text-muted-foreground line-clamp-1">{it.subtitle}</div>
+                <div className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{it.subtitle}</div>
               )}
               {it.updatedAt && (
-                <div className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
+                <div className="mt-1.5 flex items-center gap-1 text-[11px] text-muted-foreground">
                   <Clock className="w-3 h-3" />
                   <span>{it.updatedAt}</span>
                 </div>

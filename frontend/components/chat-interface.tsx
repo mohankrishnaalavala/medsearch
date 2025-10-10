@@ -51,7 +51,6 @@ export function ChatInterface() {
   const [isCitationOpen, setIsCitationOpen] = useState<boolean>(false);
   const [wsClient, setWsClient] = useState<WebSocketClient | null>(null);
 
-  const [overallProgress, setOverallProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState<string | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -174,8 +173,7 @@ export function ChatInterface() {
         if (!isSearchProgressPayload(payload)) return;
         if (payload.search_id !== response.search_id) return; // ignore other sessions
         console.debug('Search progress:', payload);
-        // Update overall progress and step label
-        if (typeof payload.progress === 'number') setOverallProgress(payload.progress);
+        // Update step label
         if (payload.current_step) setCurrentStep(payload.current_step);
         // Update agent status based on current step
         if (payload.current_step) {
@@ -211,7 +209,6 @@ export function ChatInterface() {
         // Sync citations sidebar for quick access
         setCitations(payload.citations || []);
         // Mark progress complete
-        setOverallProgress(100);
         setCurrentStep('complete');
         setIsLoading(false);
         client.disconnect();
@@ -265,32 +262,22 @@ export function ChatInterface() {
   };
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-[calc(100vh-3.5rem)] bg-background">
       {/* Left conversations sidebar */}
       <ConversationsSidebar />
 
       {/* Main chat area */}
       <div className="flex-1 flex flex-col">
-        {/* Status toolbar */}
-        <div className="border-b border-border/70 bg-background/70">
-          <div className="max-w-4xl mx-auto px-4 h-10 flex items-center justify-end gap-3 text-xs">
-            <span className="inline-flex items-center gap-2 text-muted-foreground">
-              <span className="inline-block w-2 h-2 rounded-full bg-green-500" aria-hidden />
-              All Systems Operational
-            </span>
-          </div>
-        </div>
-
-        {/* Header with Clear History button */}
+        {/* Header with Clear History button - only show when messages exist */}
         {messages.length > 0 && (
-          <div className="border-b border-border p-4 bg-background/70">
+          <div className="border-b border-border px-6 py-3 bg-background">
             <div className="max-w-4xl mx-auto flex justify-between items-center">
-              <h2 className="text-lg font-semibold">Conversation History</h2>
+              <h2 className="text-base font-semibold">Conversation</h2>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={handleClearHistory}
-                className="gap-2"
+                className="gap-2 text-muted-foreground hover:text-foreground"
               >
                 <Trash2 className="w-4 h-4" />
                 Clear History
@@ -300,92 +287,103 @@ export function ChatInterface() {
         )}
 
         {/* Messages */}
-        <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-          <div className="max-w-4xl mx-auto space-y-4">
-            {messages.length === 0 && (
-              <div className="text-center py-12">
-                <h2 className="text-2xl font-bold mb-2">Welcome to MedSearch AI</h2>
-                <p className="text-muted-foreground">
+        <ScrollArea className="flex-1 p-6" ref={scrollRef}>
+          {messages.length === 0 && !isLoading ? (
+            <div className="flex flex-col items-center justify-center h-full max-w-4xl mx-auto">
+              <div className="text-center space-y-4 mb-8">
+                <h2 className="text-3xl font-bold">Welcome to MedSearch AI</h2>
+                <p className="text-muted-foreground text-lg">
                   Ask me anything about medical research, clinical trials, or drug information.
                 </p>
               </div>
-            )}
+            </div>
+          ) : (
+            <div className="max-w-4xl mx-auto space-y-6">
+              {messages.map((message) => (
+                <MessageBubble
+                  key={message.id}
+                  message={message}
+                  onCitationClick={(id) => { setSelectedCitation(id); setIsCitationOpen(true); }}
+                />
+              ))}
 
-            {messages.map((message) => (
-              <MessageBubble
-                key={message.id}
-                message={message}
-                onCitationClick={(id) => { setSelectedCitation(id); setIsCitationOpen(true); }}
-              />
-            ))}
-
-            {/* Search progress bar */}
-            {isLoading && (
-              <div className="border-b border-border/60 bg-blue-50/70">
-                <div className="max-w-4xl mx-auto py-2 px-4">
-                  <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-                    <span>{currentStep ? currentStep : 'processing...'}</span>
-                    <span>{overallProgress}%</span>
+              {/* Loading state with agent status */}
+              {isLoading && (
+                <div className="flex gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted">
+                    <Loader2 className="h-5 w-5 text-foreground animate-spin" />
                   </div>
-                  <div className="h-2 w-full rounded bg-muted">
-                    <div
-                      className="h-2 rounded bg-primary transition-all"
-                      style={{ width: `${Math.max(0, Math.min(100, overallProgress))}%` }}
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                      aria-valuenow={overallProgress}
-                      role="progressbar"
-                    />
+                  <div className="flex-1 space-y-3">
+                    <div className="rounded-2xl px-4 py-3 bg-card border border-border max-w-3xl">
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                        <p className="text-sm text-muted-foreground">
+                          {currentStep || 'Analyzing your query...'}
+                        </p>
+                      </div>
+                    </div>
+                    {agents.length > 0 && <AgentStatus agents={agents} />}
                   </div>
                 </div>
-              </div>
-            )}
-
-            {agents.length > 0 && <AgentStatus agents={agents} />}
-          </div>
+              )}
+            </div>
+          )}
         </ScrollArea>
 
         {/* Input */}
-        <div className="border-t border-border p-4 bg-background/70">
-          <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
-            <div className="flex gap-2 items-center">
+        <div className="border-t border-border bg-background p-6">
+          <form onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-4">
+            <div className="relative">
               <Input
                 ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Ask about treatments, clinical trials, drug interactions..."
                 disabled={isLoading}
-                className="flex-1"
+                className="pr-28 h-12"
                 aria-label="Query input"
               />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label="Attach file"
-                onClick={() => console.debug('attach_clicked')}
-                disabled={isLoading}
-              >
-                <Paperclip className="w-4 h-4" />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label="Voice input"
-                onClick={() => console.debug('mic_clicked')}
-                disabled={isLoading}
-              >
-                <Mic className="w-4 h-4" />
-              </Button>
-              <Button type="submit" disabled={isLoading || !input.trim()} aria-label="Send">
-                {isLoading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Send className="w-4 h-4" />
-                )}
-              </Button>
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  aria-label="Attach file"
+                  onClick={() => console.debug('attach_clicked')}
+                  disabled={isLoading}
+                >
+                  <Paperclip className="w-4 h-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  aria-label="Voice input"
+                  onClick={() => console.debug('mic_clicked')}
+                  disabled={isLoading}
+                >
+                  <Mic className="w-4 h-4" />
+                </Button>
+                <Button
+                  type="submit"
+                  size="icon"
+                  className="h-8 w-8"
+                  disabled={isLoading || !input.trim()}
+                  aria-label="Send"
+                >
+                  {isLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
+                </Button>
+              </div>
             </div>
+            <p className="text-xs text-muted-foreground text-center">
+              MedSearch AI provides research assistance. Always verify critical medical decisions with current clinical guidelines.
+            </p>
           </form>
         </div>
       </div>

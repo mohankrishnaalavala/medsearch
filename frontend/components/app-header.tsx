@@ -11,14 +11,40 @@ export const AppHeader: FC = () => {
   if (HIDE_ON.some((p) => pathname?.startsWith(p))) return null;
 
   return (
-    <header className="border-b border-border bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-        <Link href="/" className="font-semibold">MedSearch AI</Link>
-        <nav className="flex items-center gap-4 text-sm">
-          <Link href="/" className="text-muted-foreground hover:text-foreground">Dashboard</Link>
-          <Link href="/" className="text-muted-foreground hover:text-foreground">Search</Link>
-          <Link href="/citations" className="text-muted-foreground hover:text-foreground">Citations</Link>
-          <Link href="/settings" className="text-muted-foreground hover:text-foreground">Settings</Link>
+    <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container mx-auto px-4 h-14 flex items-center justify-between">
+        <Link href="/" className="font-semibold text-lg">MedSearch AI</Link>
+        <nav className="flex items-center gap-6 text-sm font-medium">
+          <Link
+            href="/"
+            className={pathname === "/" ? "text-foreground" : "text-muted-foreground hover:text-foreground transition-colors"}
+          >
+            Dashboard
+          </Link>
+          <Link
+            href="/"
+            className={pathname === "/" ? "text-foreground" : "text-muted-foreground hover:text-foreground transition-colors"}
+          >
+            Search
+          </Link>
+          <Link
+            href="/citations"
+            className={pathname === "/citations" ? "text-foreground" : "text-muted-foreground hover:text-foreground transition-colors"}
+          >
+            Citations
+          </Link>
+          <Link
+            href="/datasources"
+            className={pathname === "/datasources" ? "text-foreground" : "text-muted-foreground hover:text-foreground transition-colors"}
+          >
+            Data Sources
+          </Link>
+          <Link
+            href="/settings"
+            className={pathname === "/settings" ? "text-foreground" : "text-muted-foreground hover:text-foreground transition-colors"}
+          >
+            Settings
+          </Link>
         </nav>
       </div>
     </header>
