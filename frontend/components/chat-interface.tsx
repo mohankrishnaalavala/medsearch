@@ -272,7 +272,7 @@ export function ChatInterface() {
       {/* Main chat area */}
       <div className="flex-1 flex flex-col">
         {/* Status toolbar */}
-        <div className="border-b border-border/70 bg-white/70">
+        <div className="border-b border-border/70 bg-background/70">
           <div className="max-w-4xl mx-auto px-4 h-10 flex items-center justify-end gap-3 text-xs">
             <span className="inline-flex items-center gap-2 text-muted-foreground">
               <span className="inline-block w-2 h-2 rounded-full bg-green-500" aria-hidden />
@@ -283,7 +283,7 @@ export function ChatInterface() {
 
         {/* Header with Clear History button */}
         {messages.length > 0 && (
-          <div className="border-b border-border p-4 bg-white/70">
+          <div className="border-b border-border p-4 bg-background/70">
             <div className="max-w-4xl mx-auto flex justify-between items-center">
               <h2 className="text-lg font-semibold">Conversation History</h2>
               <Button
@@ -346,7 +346,7 @@ export function ChatInterface() {
         </ScrollArea>
 
         {/* Input */}
-        <div className="border-t border-border p-4 bg-white/70">
+        <div className="border-t border-border p-4 bg-background/70">
           <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
             <div className="flex gap-2 items-center">
               <Input
