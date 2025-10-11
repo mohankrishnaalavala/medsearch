@@ -63,6 +63,14 @@ export default function LoginPage() {
     }
   };
 
+  const handleUseDemoCredentials = () => {
+    setFormData({
+      email: 'demo@medsearch.ai',
+      password: 'Demo@123',
+      rememberMe: false,
+    });
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary/20 p-4">
       <Card className="w-full max-w-md">
@@ -80,6 +88,30 @@ export default function LoginPage() {
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
+            {/* Demo Credentials Banner */}
+            <Alert className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+              <AlertDescription className="text-sm">
+                <div className="flex flex-col gap-2">
+                  <p className="font-semibold text-blue-900 dark:text-blue-100">
+                    🎯 Demo Credentials for Judges
+                  </p>
+                  <div className="text-blue-800 dark:text-blue-200 space-y-1">
+                    <p><strong>Email:</strong> demo@medsearch.ai</p>
+                    <p><strong>Password:</strong> Demo@123</p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleUseDemoCredentials}
+                    className="mt-2 w-full border-blue-300 dark:border-blue-700 hover:bg-blue-100 dark:hover:bg-blue-900"
+                  >
+                    Use Demo Credentials
+                  </Button>
+                </div>
+              </AlertDescription>
+            </Alert>
+
             {error && (
               <Alert variant="destructive">
                 <AlertDescription>{error}</AlertDescription>

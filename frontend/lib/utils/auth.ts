@@ -51,12 +51,47 @@ export function validatePassword(password: string): { valid: boolean; message?: 
 }
 
 /**
+ * Create default demo user if not exists
+ */
+function ensureDemoUser(): void {
+  try {
+    const users = getUsers();
+    const demoExists = users.some((u) => u.email === 'demo@medsearch.ai');
+
+    if (!demoExists) {
+      const demoUser: UserProfile = {
+        id: 'user_demo',
+        email: 'demo@medsearch.ai',
+        name: 'Demo User',
+        passwordHash: simpleHash('Demo@123'),
+        createdAt: new Date(),
+      };
+      users.push(demoUser);
+      saveUsers(users);
+    }
+  } catch (error) {
+    console.error('Failed to create demo user:', error);
+  }
+}
+
+/**
  * Get all users from localStorage
  */
 function getUsers(): UserProfile[] {
   try {
     const stored = localStorage.getItem(USERS_KEY);
-    if (!stored) return [];
+    if (!stored) {
+      // Initialize with demo user
+      ensureDemoUser();
+      const demoUser: UserProfile = {
+        id: 'user_demo',
+        email: 'demo@medsearch.ai',
+        name: 'Demo User',
+        passwordHash: simpleHash('Demo@123'),
+        createdAt: new Date(),
+      };
+      return [demoUser];
+    }
     const users = JSON.parse(stored) as UserProfile[];
     return users.map((user) => ({
       ...user,
