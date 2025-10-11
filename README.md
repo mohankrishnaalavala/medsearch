@@ -22,6 +22,44 @@
 
 MedSearch AI is an intelligent medical research assistant built for the **AI Accelerate Hackathon (Elastic Challenge)**. It leverages multi-agent orchestration to help healthcare professionals find, analyze, and synthesize medical research in seconds. The system combines Elasticsearch's hybrid search capabilities with Google Cloud's Vertex AI to deliver context-aware, citation-backed medical insights.
 
+---
+
+## 🔍 Problem Statement
+
+Healthcare professionals and researchers face significant challenges when conducting medical research:
+
+- **Information Overload**: Over 1.5 million new medical articles published annually across thousands of journals
+- **Time-Consuming Research**: Traditional literature review takes 15-20 hours per topic
+- **Fragmented Data Sources**: Information scattered across PubMed, ClinicalTrials.gov, FDA databases, and more
+- **Lack of Context**: Difficulty connecting research findings with clinical trials and drug information
+- **Citation Verification**: Manual verification of sources is tedious and error-prone
+- **Outdated Search Tools**: Traditional keyword search misses semantically related content
+
+**Impact**: Delayed medical decisions, missed research connections, and inefficient use of healthcare professionals' time.
+
+---
+
+## 💡 Solution
+
+MedSearch AI transforms medical research through intelligent multi-agent orchestration:
+
+### Core Capabilities
+
+1. **Intelligent Query Understanding** - AI-powered query analysis identifies research intent and required data sources
+2. **Multi-Agent Orchestration** - Specialized agents work in parallel to search PubMed, clinical trials, and drug databases
+3. **Hybrid Search** - Combines semantic understanding (vector search) with keyword precision (BM25)
+4. **Real-time Synthesis** - Streams comprehensive answers with citations in under 3 seconds
+5. **Citation Verification** - Every claim is backed by verifiable sources with confidence scores
+6. **Conversation Memory** - Maintains context across multiple queries for deeper research
+
+### Demo Links
+
+🎥 **Submission Video** (≤ 3 min): [Coming Soon]
+🌐 **Live Dashboard**: [Coming Soon]
+📘 **Technical Details**: [TECHNICAL.md](TECHNICAL.md)
+📄 **Medium Post**: [Coming Soon]
+📄 **LinkedIn Post**: [Coming Soon]
+
 ### Key Features
 
 - 🤖 **Multi-Agent Orchestration** - Specialized agents for Research, Clinical Trials, and Drug Information
