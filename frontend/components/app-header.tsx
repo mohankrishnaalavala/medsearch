@@ -16,8 +16,8 @@ export const AppHeader: FC = () => {
         <Link href="/" className="font-semibold text-lg">MedSearch AI</Link>
         <nav className="flex items-center gap-6 text-sm font-medium">
           <Link
-            href="/"
-            className={pathname === "/" ? "text-foreground" : "text-muted-foreground hover:text-foreground transition-colors"}
+            href="/dashboard"
+            className={pathname === "/dashboard" ? "text-foreground" : "text-muted-foreground hover:text-foreground transition-colors"}
           >
             Dashboard
           </Link>

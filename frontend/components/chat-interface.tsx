@@ -7,6 +7,7 @@ import { AgentStatus } from './agent-status';
 import { CitationCard } from './citation-card';
 import { CitationDrawer } from './citation-drawer';
 import { ConversationsSidebar } from './conversations-sidebar';
+import { CitationExport } from './citation-export';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -14,6 +15,8 @@ import { Send, Loader2, Trash2, Paperclip, Mic } from 'lucide-react';
 import { createSearch } from '@/lib/api';
 import { createWebSocketClient, WebSocketClient } from '@/lib/websocket';
 import type { WebSocketMessage } from '@/lib/websocket';
+import { saveSearchHistoryItem } from '@/lib/utils/search-history';
+import { SearchHistoryItem } from '@/lib/types/search-history';
 
 // WS payload types and guards
 type SearchProgressPayload = { search_id: string; current_step?: string; progress?: number };
@@ -40,6 +43,30 @@ const KNOWN_AGENTS: AgentStatusType[] = [
   { name: 'Drug Agent', status: 'idle', progress: 0, message: 'Waiting' },
   { name: 'Synthesis Agent', status: 'idle', progress: 0, message: 'Waiting' },
 ];
+
+// Helper function to calculate average confidence from citations
+const calculateAvgConfidence = (citations: Citation[]): number => {
+  if (citations.length === 0) return 0;
+  // For now, return a default confidence score
+  // In the future, this could be calculated from actual citation metadata
+  return 85;
+};
+
+// Helper function to extract unique sources from citations
+const extractSources = (citations: Citation[]): string[] => {
+  const sources = new Set<string>();
+  citations.forEach((citation) => {
+    // Map source_type to display name
+    const sourceMap: Record<string, string> = {
+      pubmed: 'PubMed',
+      clinical_trial: 'Clinical Trials',
+      drug_info: 'FDA',
+    };
+    const sourceName = sourceMap[citation.source_type] || citation.source_type;
+    sources.add(sourceName);
+  });
+  return Array.from(sources);
+};
 
 export function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -208,6 +235,20 @@ export function ChatInterface() {
         );
         // Sync citations sidebar for quick access
         setCitations(payload.citations || []);
+
+        // Save to search history
+        const searchHistoryItem: SearchHistoryItem = {
+          id: response.search_id,
+          query: userMessage.content,
+          timestamp: new Date(),
+          resultsCount: payload.citations?.length || 0,
+          avgConfidence: calculateAvgConfidence(payload.citations || []),
+          sources: extractSources(payload.citations || []),
+          citations: payload.citations || [],
+          isSaved: false,
+        };
+        saveSearchHistoryItem(searchHistoryItem);
+
         // Mark progress complete
         setCurrentStep('complete');
         setIsLoading(false);
@@ -392,7 +433,10 @@ export function ChatInterface() {
       <div className="hidden lg:block w-80 border-l border-border p-4 overflow-y-auto">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold">Active Citations</h3>
-          <span className="text-xs text-muted-foreground">{citations.length} sources</span>
+          <div className="flex items-center gap-2">
+            {citations.length > 0 && <CitationExport citations={citations} size="sm" />}
+            <span className="text-xs text-muted-foreground">{citations.length} sources</span>
+          </div>
         </div>
         <div className="space-y-3">
           {citations.map((citation, index) => (
