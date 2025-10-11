@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Message, Citation, AgentStatus as AgentStatusType } from '@/lib/types';
 import { MessageBubble } from './message-bubble';
 import { AgentStatus } from './agent-status';
@@ -11,12 +11,12 @@ import { CitationExport } from './citation-export';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, Loader2, Trash2, Paperclip, Mic } from 'lucide-react';
+import { Send, Loader2, Trash2, Paperclip, Mic, Plus } from 'lucide-react';
 import { createSearch } from '@/lib/api';
 import { createWebSocketClient, WebSocketClient } from '@/lib/websocket';
 import type { WebSocketMessage } from '@/lib/websocket';
-import { saveSearchHistoryItem } from '@/lib/utils/search-history';
-import { SearchHistoryItem } from '@/lib/types/search-history';
+import { saveSearchHistoryItem, saveConversation, getConversations } from '@/lib/utils/search-history';
+import { SearchHistoryItem, ConversationMetadata } from '@/lib/types/search-history';
 
 // WS payload types and guards
 type SearchProgressPayload = { search_id: string; current_step?: string; progress?: number };
@@ -77,35 +77,97 @@ export function ChatInterface() {
   const [selectedCitation, setSelectedCitation] = useState<string | null>(null);
   const [isCitationOpen, setIsCitationOpen] = useState<boolean>(false);
   const [wsClient, setWsClient] = useState<WebSocketClient | null>(null);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
 
   const [currentStep, setCurrentStep] = useState<string | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Load conversation history from localStorage on mount
-  useEffect(() => {
-    const savedMessages = localStorage.getItem('medsearch_conversation');
-    if (savedMessages) {
-      try {
-        const parsed = JSON.parse(savedMessages);
-        // Limit to last 20 messages
-        const recentMessages = parsed.slice(-20);
-        setMessages(recentMessages);
-      } catch (error) {
-        console.error('Failed to load conversation history:', error);
+  // Define conversation management functions
+  const loadConversation = useCallback((conversationId: string) => {
+    try {
+      const conversationKey = `medsearch_conversation_${conversationId}`;
+      const saved = localStorage.getItem(conversationKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setMessages(parsed);
+        setCurrentConversationId(conversationId);
       }
+    } catch (error) {
+      console.error('Failed to load conversation:', error);
     }
   }, []);
 
-  // Save conversation history to localStorage when messages change
-  useEffect(() => {
-    if (messages.length > 0) {
-      // Limit to last 20 messages to avoid localStorage quota
-      const recentMessages = messages.slice(-20);
-      localStorage.setItem('medsearch_conversation', JSON.stringify(recentMessages));
+  const saveCurrentConversation = useCallback(() => {
+    if (!currentConversationId || messages.length === 0) return;
+
+    try {
+      // Save messages to conversation-specific key
+      const conversationKey = `medsearch_conversation_${currentConversationId}`;
+      localStorage.setItem(conversationKey, JSON.stringify(messages));
+
+      // Update conversation metadata
+      const firstUserMessage = messages.find((m) => m.role === 'user');
+      const title = firstUserMessage?.content.slice(0, 50) || 'New Conversation';
+      const lastUserMessage = messages.filter((m) => m.role === 'user').pop();
+
+      const metadata: ConversationMetadata = {
+        id: currentConversationId,
+        title,
+        createdAt: messages[0]?.timestamp || new Date(),
+        updatedAt: new Date(),
+        messageCount: messages.length,
+        lastQuery: lastUserMessage?.content,
+      };
+
+      saveConversation(metadata);
+    } catch (error) {
+      console.error('Failed to save conversation:', error);
     }
-  }, [messages]);
+  }, [currentConversationId, messages]);
+
+  // Load conversation history from localStorage on mount
+  useEffect(() => {
+    // Try to load the most recent conversation
+    const conversations = getConversations();
+    if (conversations.length > 0) {
+      const mostRecent = conversations[0];
+      loadConversation(mostRecent.id);
+    }
+  }, [loadConversation]);
+
+  // Save conversation when messages change
+  useEffect(() => {
+    if (messages.length > 0 && currentConversationId) {
+      saveCurrentConversation();
+    }
+  }, [messages, currentConversationId, saveCurrentConversation]);
+
+  const handleNewChat = () => {
+    // Save current conversation before starting new one
+    if (messages.length > 0 && currentConversationId) {
+      saveCurrentConversation();
+    }
+
+    // Clear current state
+    setMessages([]);
+    setCitations([]);
+    setAgents([]);
+    setCurrentConversationId(null);
+    setInput('');
+    inputRef.current?.focus();
+  };
+
+  const handleConversationSelect = (conversationId: string) => {
+    // Save current conversation before switching
+    if (messages.length > 0 && currentConversationId) {
+      saveCurrentConversation();
+    }
+
+    // Load selected conversation
+    loadConversation(conversationId);
+  };
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -133,6 +195,12 @@ export function ChatInterface() {
 
     if (!input.trim() || isLoading) {
       return;
+    }
+
+    // Create new conversation if this is the first message
+    if (!currentConversationId) {
+      const newConversationId = `conv_${Date.now()}`;
+      setCurrentConversationId(newConversationId);
     }
 
     const userMessage: Message = {
@@ -295,37 +363,57 @@ export function ChatInterface() {
 
   const handleClearHistory = () => {
     if (confirm('Are you sure you want to clear the conversation history?')) {
-      setMessages([]);
-      setCitations([]);
-      setAgents([]);
-      localStorage.removeItem('medsearch_conversation');
+      // Save current conversation before clearing
+      if (messages.length > 0 && currentConversationId) {
+        saveCurrentConversation();
+      }
+
+      // Start a new chat
+      handleNewChat();
     }
   };
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)] bg-background">
       {/* Left conversations sidebar */}
-      <ConversationsSidebar />
+      <ConversationsSidebar
+        currentConversationId={currentConversationId || undefined}
+        onConversationSelect={handleConversationSelect}
+        onNewChat={handleNewChat}
+      />
 
       {/* Main chat area */}
       <div className="flex-1 flex flex-col">
-        {/* Header with Clear History button - only show when messages exist */}
-        {messages.length > 0 && (
-          <div className="border-b border-border px-6 py-3 bg-background">
-            <div className="max-w-4xl mx-auto flex justify-between items-center">
-              <h2 className="text-base font-semibold">Conversation</h2>
+        {/* Header with New Chat and Clear History buttons */}
+        <div className="border-b border-border px-6 py-3 bg-background">
+          <div className="max-w-4xl mx-auto flex justify-between items-center">
+            <h2 className="text-base font-semibold">
+              {messages.length > 0 ? 'Conversation' : 'New Chat'}
+            </h2>
+            <div className="flex gap-2">
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                onClick={handleClearHistory}
-                className="gap-2 text-muted-foreground hover:text-foreground"
+                onClick={handleNewChat}
+                className="gap-2"
               >
-                <Trash2 className="w-4 h-4" />
-                Clear History
+                <Plus className="w-4 h-4" />
+                New Chat
               </Button>
+              {messages.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClearHistory}
+                  className="gap-2 text-muted-foreground hover:text-foreground"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Clear History
+                </Button>
+              )}
             </div>
           </div>
-        )}
+        </div>
 
         {/* Messages */}
         <ScrollArea className="flex-1 p-6" ref={scrollRef}>
