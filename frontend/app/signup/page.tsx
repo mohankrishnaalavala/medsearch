@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -8,16 +8,30 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Beaker } from 'lucide-react';
+import { Loader2, Activity, CheckCircle2 } from 'lucide-react';
+import { useAuth } from '@/contexts/auth-context';
+import { signup } from '@/lib/utils/auth';
+import { useToast } from '@/hooks/use-toast';
 
 export default function SignupPage() {
   const router = useRouter();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const { toast } = useToast();
+  const { isAuthenticated } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+  });
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push('/');
+    }
+  }, [isAuthenticated, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,35 +39,20 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
-      // Validation
-      if (!name || !email || !password || !confirmPassword) {
-        throw new Error('Please fill in all fields');
+      const result = signup(formData);
+
+      if (result.success && result.user) {
+        toast({
+          title: 'Account created successfully!',
+          description: 'Please sign in to continue',
+        });
+        router.push('/login');
+      } else {
+        setError(result.error || 'Signup failed');
       }
-
-      if (!email.includes('@')) {
-        throw new Error('Please enter a valid email address');
-      }
-
-      if (password.length < 6) {
-        throw new Error('Password must be at least 6 characters');
-      }
-
-      if (password !== confirmPassword) {
-        throw new Error('Passwords do not match');
-      }
-
-      // Store user session in localStorage (demo only - use proper auth in production)
-      localStorage.setItem('medsearch_user', JSON.stringify({
-        name,
-        email,
-        loggedIn: true,
-        timestamp: new Date().toISOString(),
-      }));
-
-      // Redirect to home page
-      router.push('/');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Signup failed');
+      console.error('Signup error:', err);
+      setError('An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }
@@ -65,7 +64,7 @@ export default function SignupPage() {
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
             <div className="flex items-center gap-2">
-              <Beaker className="w-8 h-8 text-primary" />
+              <Activity className="w-8 h-8 text-primary" />
               <h1 className="text-2xl font-bold">MedSearch AI</h1>
             </div>
           </div>
@@ -87,10 +86,11 @@ export default function SignupPage() {
                 id="name"
                 type="text"
                 placeholder="John Doe"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 disabled={isLoading}
                 required
+                autoComplete="name"
               />
             </div>
             <div className="space-y-2">
@@ -98,11 +98,12 @@ export default function SignupPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="name@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 disabled={isLoading}
                 required
+                autoComplete="email"
               />
             </div>
             <div className="space-y-2">
@@ -110,12 +111,16 @@ export default function SignupPage() {
               <Input
                 id="password"
                 type="password"
-                placeholder="Create a password (min 6 characters)"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Min 8 chars, 1 uppercase, 1 lowercase, 1 number"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 disabled={isLoading}
                 required
+                autoComplete="new-password"
               />
+              <p className="text-xs text-muted-foreground">
+                Must be at least 8 characters with uppercase, lowercase, and number
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirm Password</Label>
@@ -123,10 +128,11 @@ export default function SignupPage() {
                 id="confirmPassword"
                 type="password"
                 placeholder="Confirm your password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                value={formData.confirmPassword}
+                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                 disabled={isLoading}
                 required
+                autoComplete="new-password"
               />
             </div>
           </CardContent>
@@ -142,7 +148,10 @@ export default function SignupPage() {
                   Creating account...
                 </>
               ) : (
-                'Create account'
+                <>
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  Create account
+                </>
               )}
             </Button>
             <div className="text-sm text-center text-muted-foreground">

@@ -1,21 +1,37 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Beaker } from 'lucide-react';
+import { Loader2, Activity } from 'lucide-react';
+import { useAuth } from '@/contexts/auth-context';
+import { login } from '@/lib/utils/auth';
+import { useToast } from '@/hooks/use-toast';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('demo@medsearch.ai');
-  const [password, setPassword] = useState('demo123');
+  const { toast } = useToast();
+  const { login: setAuthUser, isAuthenticated } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    rememberMe: false,
+  });
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push('/');
+    }
+  }, [isAuthenticated, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,27 +39,25 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      // For hackathon demo, just validate email format and redirect
-      if (!email || !password) {
-        throw new Error('Please enter both email and password');
+      const result = login({
+        email: formData.email,
+        password: formData.password,
+        rememberMe: formData.rememberMe,
+      });
+
+      if (result.success && result.session) {
+        setAuthUser(result.session.user);
+        toast({
+          title: 'Login successful',
+          description: `Welcome back, ${result.session.user.name}!`,
+        });
+        router.push('/');
+      } else {
+        setError(result.error || 'Invalid credentials');
       }
-
-      if (!email.includes('@')) {
-        throw new Error('Please enter a valid email address');
-      }
-
-      // Store user session in localStorage (demo only - use proper auth in production)
-      localStorage.setItem('medsearch_user', JSON.stringify({
-        email,
-        name: email.split('@')[0],
-        loggedIn: true,
-        timestamp: new Date().toISOString(),
-      }));
-
-      // Redirect to home page
-      router.push('/');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+      console.error('Login error:', err);
+      setError('An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }
@@ -55,13 +69,13 @@ export default function LoginPage() {
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
             <div className="flex items-center gap-2">
-              <Beaker className="w-8 h-8 text-primary" />
+              <Activity className="w-8 h-8 text-primary" />
               <h1 className="text-2xl font-bold">MedSearch AI</h1>
             </div>
           </div>
           <CardTitle className="text-2xl text-center">Welcome back</CardTitle>
           <CardDescription className="text-center">
-            Demo credentials are pre-filled. Just click Sign In!
+            Sign in to your account to continue
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
@@ -76,11 +90,12 @@ export default function LoginPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="name@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 disabled={isLoading}
                 required
+                autoComplete="email"
               />
             </div>
             <div className="space-y-2">
@@ -88,17 +103,41 @@ export default function LoginPage() {
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 disabled={isLoading}
                 required
+                autoComplete="current-password"
               />
             </div>
             <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="rememberMe"
+                  checked={formData.rememberMe}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, rememberMe: checked as boolean })
+                  }
+                  disabled={isLoading}
+                />
+                <Label
+                  htmlFor="rememberMe"
+                  className="text-sm font-normal cursor-pointer"
+                >
+                  Remember me
+                </Label>
+              </div>
               <Link
-                href="/forgot-password"
+                href="#"
                 className="text-sm text-muted-foreground hover:text-primary"
+                onClick={(e) => {
+                  e.preventDefault();
+                  toast({
+                    title: 'Coming Soon',
+                    description: 'Password reset feature will be available soon',
+                  });
+                }}
               >
                 Forgot password?
               </Link>

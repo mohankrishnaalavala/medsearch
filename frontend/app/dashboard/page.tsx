@@ -9,6 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { SearchHistoryCard } from "@/components/search-history-card";
 import { SearchFiltersComponent } from "@/components/search-filters";
 import { Button } from "@/components/ui/button";
+import { ProtectedRoute } from "@/components/protected-route";
 import {
   getSearchHistory,
   getSavedSearches,
@@ -17,7 +18,7 @@ import {
 } from "@/lib/utils/search-history";
 import { SearchHistoryItem, SearchFilters } from "@/lib/types/search-history";
 
-export default function DashboardPage() {
+function DashboardContent() {
   const router = useRouter();
   const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([]);
   const [savedSearches, setSavedSearches] = useState<SearchHistoryItem[]>([]);
@@ -272,6 +273,14 @@ export default function DashboardPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <ProtectedRoute>
+      <DashboardContent />
+    </ProtectedRoute>
   );
 }
 
