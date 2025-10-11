@@ -1,18 +1,26 @@
 # MedSearch AI 🏥🤖
 
-**Multi-agent medical research assistant powered by AI**
+<p align="center">
+  <img src="logo.png" alt="MedSearch AI Logo" width="200"/>
+</p>
 
-Transform 20 hours of medical research into 20 seconds of intelligent conversation.
+<p align="center">
+  <strong>Multi-Agent Medical Research Assistant</strong><br/>
+  Transform 20 hours of medical research into 20 seconds of intelligent conversation
+</p>
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![Next.js 15](https://img.shields.io/badge/Next.js-15-black)](https://nextjs.org/)
+<p align="center">
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"/></a>
+  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python 3.11+"/></a>
+  <a href="https://nextjs.org/"><img src="https://img.shields.io/badge/Next.js-15-black" alt="Next.js 15"/></a>
+  <a href="https://ai-accelerate.devpost.com/"><img src="https://img.shields.io/badge/Hackathon-AI%20Accelerate-orange" alt="AI Accelerate Hackathon"/></a>
+</p>
 
 ---
 
 ## 🎯 Overview
 
-MedSearch AI is an intelligent medical research assistant that uses multi-agent orchestration to help healthcare professionals find, analyze, and synthesize medical research in seconds. The system combines Elasticsearch's hybrid search capabilities with Google Cloud's Vertex AI to deliver context-aware, citation-backed medical insights.
+MedSearch AI is an intelligent medical research assistant built for the **AI Accelerate Hackathon (Elastic Challenge)**. It leverages multi-agent orchestration to help healthcare professionals find, analyze, and synthesize medical research in seconds. The system combines Elasticsearch's hybrid search capabilities with Google Cloud's Vertex AI to deliver context-aware, citation-backed medical insights.
 
 ### Key Features
 
@@ -228,22 +236,22 @@ medsearch/
 └── docs/               # Documentation
 ```
 
-### Development Phases
+### Development Approach
 
-This project follows a phased development approach:
+This project was developed iteratively with a focus on:
 
-1. **Agent 1: Setup** ✅ - Project structure and infrastructure
-2. **Agent 2: Backend** - FastAPI, Elasticsearch, Vertex AI integration
-3. **Agent 3: Agents** - LangGraph multi-agent workflow
-4. **Agent 4: Data** - PubMed, ClinicalTrials, FDA data ingestion
-5. **Agent 5: Frontend** - Next.js UI components
-6. **Agent 6: Testing** - Comprehensive test suite
+1. **Infrastructure Setup** - Docker Compose orchestration, Google Cloud integration
+2. **Backend Development** - FastAPI REST API, WebSocket streaming, multi-agent workflow
+3. **Search Implementation** - Elasticsearch hybrid search (vector + BM25), embedding generation
+4. **Data Pipeline** - ETL scripts for PubMed, ClinicalTrials.gov, and FDA data
+5. **Frontend Development** - Next.js UI with real-time updates and citation management
+6. **Testing & Optimization** - End-to-end testing, performance tuning, deployment
 
 ---
 
 ## 🤝 Contributing
 
-This is a hackathon project. Contributions are welcome!
+This is a hackathon submission project. If you'd like to contribute or build upon this work:
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -257,23 +265,75 @@ This is a hackathon project. Contributions are welcome!
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+### Third-Party Licenses & Attributions
+
+This project uses the following open-source libraries and services:
+
+**Backend:**
+- [FastAPI](https://fastapi.tiangolo.com/) - MIT License
+- [LangChain](https://github.com/langchain-ai/langchain) - MIT License
+- [LangGraph](https://github.com/langchain-ai/langgraph) - MIT License
+- [Elasticsearch Python Client](https://github.com/elastic/elasticsearch-py) - Apache 2.0 License
+- [Pydantic](https://github.com/pydantic/pydantic) - MIT License
+
+**Frontend:**
+- [Next.js](https://nextjs.org/) - MIT License
+- [React](https://reactjs.org/) - MIT License
+- [Tailwind CSS](https://tailwindcss.com/) - MIT License
+- [shadcn/ui](https://ui.shadcn.com/) - MIT License
+- [Radix UI](https://www.radix-ui.com/) - MIT License
+- [Lucide Icons](https://lucide.dev/) - ISC License
+
+**Cloud Services:**
+- [Google Cloud Vertex AI](https://cloud.google.com/vertex-ai) - Commercial service
+- [Elasticsearch](https://www.elastic.co/) - Elastic License 2.0 / SSPL
+
+**Data Sources:**
+- [PubMed](https://pubmed.ncbi.nlm.nih.gov/) - Public domain (U.S. Government)
+- [ClinicalTrials.gov](https://clinicaltrials.gov/) - Public domain (U.S. Government)
+- [FDA Drugs Database](https://www.fda.gov/) - Public domain (U.S. Government)
+
+---
+
+## 🏆 Hackathon Submission
+
+**Event:** AI Accelerate: Unlocking New Frontiers
+**Challenge:** Elastic Challenge
+**Submission Date:** October 2025
+**Developer:** Mohan Krishna Alavala
+
+### Hackathon Requirements Compliance
+
+✅ **Google Cloud Integration** - Uses Vertex AI for embeddings (text-embedding-004) and LLM (Gemini 2.5 Flash)
+✅ **Elastic Integration** - Elasticsearch 8.15 for hybrid search (vector + BM25)
+✅ **Open Source** - MIT License, public repository
+✅ **Original Work** - Built from scratch during hackathon period
+✅ **Functional Demo** - Deployed and accessible with video demonstration
+✅ **Documentation** - Comprehensive README, setup instructions, and code comments
+
 ---
 
 ## 🙏 Acknowledgments
 
-- Built for the AI Accelerate Hackathon - Elastic Challenge
-- Powered by Google Cloud Vertex AI
-- Search powered by Elasticsearch
-- UI components from shadcn/ui
+- **AI Accelerate Hackathon** - For providing the platform and challenge
+- **Google Cloud** - Vertex AI platform and Gemini models
+- **Elastic** - Elasticsearch hybrid search capabilities
+- **shadcn/ui** - Beautiful, accessible UI components
+- **PubMed, ClinicalTrials.gov, FDA** - Public medical data sources
+- **Open Source Community** - For the amazing tools and libraries
 
 ---
 
 ## 📧 Contact
 
 **Mohan Krishna Alavala**
-Email: mohanalavala68@gmail.com
-GitHub: [@mohankrishnaalavala](https://github.com/mohankrishnaalavala)
+📧 Email: mohanalavala68@gmail.com
+🐙 GitHub: [@mohankrishnaalavala](https://github.com/mohankrishnaalavala)
+💼 LinkedIn: [Mohan Krishna Alavala](https://www.linkedin.com/in/mohankrishnaalavala)
 
 ---
 
-**Made with ❤️ for healthcare professionals**
+<p align="center">
+  <strong>Made with ❤️ for healthcare professionals</strong><br/>
+  <em>Empowering medical research through AI</em>
+</p>
