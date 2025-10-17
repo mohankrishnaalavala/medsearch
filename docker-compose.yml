@@ -6,7 +6,7 @@ services:
     container_name: medsearch-elasticsearch
     environment:
       - discovery.type=single-node
-      - ES_JAVA_OPTS=-Xms2g -Xmx2g
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
       - xpack.security.enabled=true
       - xpack.security.authc.api_key.enabled=true
       - bootstrap.memory_lock=true
@@ -15,7 +15,7 @@ services:
       memlock:
         soft: -1
         hard: -1
-    mem_limit: 2.5g
+    mem_limit: 1.5g
     cpus: 1.0
     volumes:
       - es_data:/usr/share/elasticsearch/data
