@@ -2,7 +2,21 @@
  * WebSocket client for real-time search updates
  */
 
-const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000';
+// Use relative WebSocket URL in production (works through nginx proxy)
+// Use localhost in development
+const getWsBaseUrl = () => {
+  if (typeof window === 'undefined') return 'ws://localhost:8000';
+
+  if (window.location.hostname === 'localhost') {
+    return process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000';
+  }
+
+  // Production: use same host with wss protocol
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${protocol}//${window.location.host}`;
+};
+
+const WS_BASE_URL = getWsBaseUrl();
 
 export type MessageType =
   | '*'
