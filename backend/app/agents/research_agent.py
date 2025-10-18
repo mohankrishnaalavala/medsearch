@@ -81,16 +81,22 @@ async def execute_research_agent(
                     )
                     logger.debug("Generated query embedding (no cache)")
 
-            # Perform hybrid search on PubMed index
-            results = await es_service.hybrid_search(
-                index_name=es_service.indices["pubmed"],
-                query_text=query,
-                query_embedding=query_embedding,
-                filters=filters,
-                size=max_results,
-                keyword_weight=0.3,
-                semantic_weight=0.7,
-            )
+            # Perform hybrid search on PubMed index (with safe fallback)
+            try:
+                results = await es_service.hybrid_search(
+                    index_name=es_service.indices["pubmed"],
+                    query_text=query,
+                    query_embedding=query_embedding,
+                    filters=filters,
+                    size=max_results,
+                    keyword_weight=0.3,
+                    semantic_weight=0.7,
+                )
+            except Exception as e:
+                logger.warning(f"ES search failed, using mock PubMed data: {e}")
+                from app.services.mock_data_service import get_mock_data_service
+                mock_service = get_mock_data_service()
+                results = mock_service.get_pubmed_results(query, max_results)
 
             # If Elasticsearch returns no results, fall back to mock data to avoid empty UX
             if not results:

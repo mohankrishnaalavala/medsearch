@@ -76,16 +76,23 @@ async def execute_drug_agent(
                         query, task_type="RETRIEVAL_QUERY"
                     )
 
-            # Perform hybrid search on drugs index
-            results = await es_service.hybrid_search(
-                index_name=es_service.indices["drugs"],
-                query_text=query,
-                query_embedding=query_embedding,
-                filters=filters,
-                size=max_results,
-                keyword_weight=0.5,  # Equal weight for drug searches
-                semantic_weight=0.5,
-            )
+            # Perform hybrid search on drugs index (with safe fallback)
+            try:
+                results = await es_service.hybrid_search(
+                    index_name=es_service.indices["drugs"],
+                    query_text=query,
+                    query_embedding=query_embedding,
+                    filters=filters,
+                    size=max_results,
+                    keyword_weight=0.5,  # Equal weight for drug searches
+                    semantic_weight=0.5,
+                )
+            except Exception as e:
+                logger.warning(f"ES drugs search failed, using mock data: {e}")
+                from app.services.mock_data_service import get_mock_data_service
+                mock_service = get_mock_data_service()
+                results = mock_service.get_drug_results(query, max_results)
+
             # If ES returns no results, use mock fallback to avoid empty UX
             if not results:
                 try:
