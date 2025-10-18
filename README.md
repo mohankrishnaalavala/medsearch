@@ -55,8 +55,9 @@ MedSearch AI transforms medical research through intelligent multi-agent orchest
 ### Demo Links
 
 🎥 **Submission Video** (≤ 3 min): [Coming Soon]
-🌐 **Live Dashboard**: [Coming Soon]
-📘 **Technical Details**: [TECHNICAL.md](TECHNICAL.md)
+🌐 **Live App**: https://medsearch.mohankrishna.site/
+📘 **Technical Details**: [docs/TECHNICAL_DETAILS.md](docs/TECHNICAL_DETAILS.md)
+🤝 **Contributing Guide**: [CONTRIBUTING.md](CONTRIBUTING.md)
 📄 **Medium Post**: [Coming Soon]
 📄 **LinkedIn Post**: [Coming Soon]
 
@@ -98,7 +99,7 @@ MedSearch AI transforms medical research through intelligent multi-agent orchest
 **Infrastructure:**
 - Google Compute Engine e2-standard-2 VM (8GB RAM, 2 vCPU)
 - Docker Compose orchestration
-- Cloudflare Tunnel for HTTPS
+- Nginx reverse proxy with HTTPS
 - GitHub Actions for CI/CD
 
 ### System Diagram
@@ -118,68 +119,39 @@ MedSearch AI transforms medical research through intelligent multi-agent orchest
 
 ---
 
-## 🚀 Quick Start
+## � Why Elastic + Google Cloud
 
-### Prerequisites
+Elastic and Google Cloud together enabled rapid development and robust search quality:
 
-- Docker and Docker Compose
-- Node.js 20+ (for local frontend development)
-- Python 3.11+ (for local backend development)
-- Google Cloud account with Vertex AI enabled
-- Service account key (`medsearch-key.json`)
+- Elasticsearch
+  - Hybrid search (BM25 + vector) for both precision and semantic recall
+  - Fast filtering and aggregations for medical facets (dates, study types)
+  - Flexible mappings and painless ingestion for heterogeneous medical sources
+  - Scales from local dev to production with the same APIs
+- Google Cloud Vertex AI
+  - High-quality embeddings (text-embedding-004) for semantic search
+  - Gemini Flash for low-latency synthesis and lightweight analysis prompts
+  - Managed services, IAM, and service accounts simplified secure operations
+  - Reduced time-to-value: no custom model hosting or complex infra needed
 
-### Local Development
+Together, these platforms gave us production-grade relevance with minimal glue code, allowing us to focus on UX, multi-agent design, and trustworthy citations.
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/mohankrishnaalavala/medsearch.git
-   cd medsearch
-   ```
+## 🧑‍⚖️ How Judges Can Test
 
-2. **Setup environment variables**
-   ```bash
-   # Backend
-   cp backend/.env.example backend/.env
-   # Update backend/.env with your configuration
+1. Open the live app: https://medsearch.mohankrishna.site/
+2. Enter a query (examples):
+   - "pollen treatments"
+   - "allergic rhinitis immunotherapy"
+   - "metformin side effects in elderly"
+3. Observe streaming updates (research → clinical → drug → synthesis) in a few seconds.
+4. Verify the final answer includes citations; expand them to view titles, journal/phase/status, and dates.
+5. Ask a follow-up question to see conversation context retention.
+6. Edge case (limited evidence): try a very narrow query; you should still receive partial, honest output with clear limitations.
+7. Reliability: even if Elasticsearch is temporarily unavailable, the system returns curated mock results so you’ll still see synthesized answers and citations.
 
-   # Frontend
-   cp frontend/.env.example frontend/.env.local
-   ```
+## 📸 Screenshots
 
-3. **Place service account key**
-   ```bash
-   # Copy your medsearch-key.json to the backend directory
-   cp /path/to/medsearch-key.json backend/
-   ```
-
-4. **Start services with Docker Compose**
-   ```bash
-   docker-compose up -d
-   ```
-
-5. **Access the application**
-   - Frontend: http://localhost:3000
-   - API: http://localhost:8000
-   - API Docs: http://localhost:8000/docs
-   - Elasticsearch: http://localhost:9200
-
-### Development Without Docker
-
-**Backend:**
-```bash
-cd backend
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload
-```
-
-**Frontend:**
-```bash
-cd frontend
-npm install
-npm run dev
-```
+(You can add screenshots here to illustrate the end-to-end flow.)
 
 ---
 
@@ -206,98 +178,9 @@ npm run dev
 
 ---
 
-## 🧪 Testing
-
-### Backend Tests
-```bash
-cd backend
-pytest
-pytest --cov=app --cov-report=html
-```
-
-### Frontend Tests
-```bash
-cd frontend
-npm run test
-npm run test:coverage
-```
-
-### Type Checking
-```bash
-# Backend
-cd backend
-mypy app
-
-# Frontend
-cd frontend
-npm run type-check
-```
-
-### Linting
-```bash
-# Backend
-cd backend
-ruff check app
-
-# Frontend
-cd frontend
-npm run lint
-```
-
----
-
-## 📚 Documentation
 
 
----
 
-## 🛠️ Development Workflow
-
-### Project Structure
-```
-medsearch/
-├── backend/              # FastAPI backend
-│   ├── app/
-│   │   ├── api/         # API routes
-│   │   ├── agents/      # LangGraph agents
-│   │   ├── services/    # Business logic
-│   │   ├── models/      # Data models
-│   │   └── core/        # Configuration
-│   └── tests/           # Backend tests
-├── frontend/            # Next.js frontend
-│   ├── app/            # Next.js app router
-│   ├── components/     # React components
-│   ├── lib/            # Utilities and types
-│   └── hooks/          # Custom React hooks
-├── data-ingestion/     # ETL scripts
-├── scripts/            # Deployment scripts
-└── docs/               # Documentation
-```
-
-### Development Approach
-
-This project was developed iteratively with a focus on:
-
-1. **Infrastructure Setup** - Docker Compose orchestration, Google Cloud integration
-2. **Backend Development** - FastAPI REST API, WebSocket streaming, multi-agent workflow
-3. **Search Implementation** - Elasticsearch hybrid search (vector + BM25), embedding generation
-4. **Data Pipeline** - ETL scripts for PubMed, ClinicalTrials.gov, and FDA data
-5. **Frontend Development** - Next.js UI with real-time updates and citation management
-6. **Testing & Optimization** - End-to-end testing, performance tuning, deployment
-
----
-
-## 🤝 Contributing
-
-This is a hackathon submission project. If you'd like to contribute or build upon this work:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
----
 
 ## 📄 License
 
