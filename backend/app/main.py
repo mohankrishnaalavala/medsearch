@@ -50,18 +50,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             es_service = await get_elasticsearch_service()
             logger.info("Elasticsearch service initialized")
         except Exception as e:
-            if settings.APP_ENV.lower() == "production":
-                raise
-            logger.warning(f"Elasticsearch not available (dev mode): {e}")
+            # Do not block startup if Elasticsearch is unavailable; run in degraded mode
+            logger.warning(f"Elasticsearch not available, starting in degraded mode with mock data fallback: {e}")
 
         # Initialize Redis (non-blocking in dev)
         try:
             redis_service = await get_redis_service()
             logger.info("Redis service initialized")
         except Exception as e:
-            if settings.APP_ENV.lower() == "production":
-                raise
-            logger.warning(f"Redis not available (dev mode): {e}")
+            # Redis is non-critical for core read-paths; continue in degraded mode
+            logger.warning(f"Redis not available, continuing without cache: {e}")
 
         logger.info("All services initialized successfully")
 
