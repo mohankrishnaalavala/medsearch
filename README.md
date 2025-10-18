@@ -121,20 +121,25 @@ MedSearch AI transforms medical research through intelligent multi-agent orchest
 
 ## � Why Elastic + Google Cloud
 
-Elastic and Google Cloud together enabled rapid development and robust search quality:
+How these two platforms directly helped this project ship fast with quality:
 
 - Elasticsearch
-  - Hybrid search (BM25 + vector) for both precision and semantic recall
-  - Fast filtering and aggregations for medical facets (dates, study types)
-  - Flexible mappings and painless ingestion for heterogeneous medical sources
-  - Scales from local dev to production with the same APIs
-- Google Cloud Vertex AI
-  - High-quality embeddings (text-embedding-004) for semantic search
-  - Gemini Flash for low-latency synthesis and lightweight analysis prompts
-  - Managed services, IAM, and service accounts simplified secure operations
-  - Reduced time-to-value: no custom model hosting or complex infra needed
+  - Hybrid retrieval (BM25 + vector) delivered strong precision and semantic recall for medical content
+  - Per-source indices (PubMed, ClinicalTrials, Drugs) enabled specialized scoring and filters (dates, phases, study types)
+  - Simple mappings and stable APIs let us iterate quickly from prototype to production
+  - Enabled future growth: same query model scales from local dev to larger clusters without code changes
+- Google Cloud (Vertex AI + Compute Engine)
+  - Vertex AI text-embedding-004 powered our semantic search vectors with low latency and great quality
+  - Gemini Flash enabled fast synthesis and utility prompts (routing, summarization), keeping responses concise and cited
+  - Service accounts + IAM kept secrets and access scoped properly without custom infra
+  - Compute Engine VM hosted our stack reliably; Nginx terminated TLS and routed REST + WebSocket securely
 
-Together, these platforms gave us production-grade relevance with minimal glue code, allowing us to focus on UX, multi-agent design, and trustworthy citations.
+Enhancements enabled during the hackathon (leveraging Elastic + Google Cloud):
+- Resilient retrieval: if Elasticsearch or embeddings fail, agents fall back to curated mock data so users still receive cited answers
+- Degraded startup mode: the API continues to run even if ES/Redis are unavailable, recovering automatically when they return
+- Redis embedding cache: reduces latency and Vertex AI calls, improving speed and cost-efficiency
+- WebSocket over HTTPS stability: Nginx configuration ensures reliable streaming from VM to browser
+- UX improvements: persistent medical disclaimer, better settings scrolling, and clearer progress signals while results stream
 
 ## 🧑‍⚖️ How Judges Can Test
 
@@ -155,32 +160,38 @@ Together, these platforms gave us production-grade relevance with minimal glue c
 
 ---
 
-## 📦 Deployment
 
-### Deploy to Google Cloud VM
 
-1. **Provision VM**
-   ```bash
-   ./scripts/provision-vm.sh medsearch-ai us-central1-a
-   ```
 
-2. **Setup GitHub Secrets**
-   - `GCP_PROJECT_ID`: Your GCP project ID
-   - `GCP_SA_KEY`: Service account key JSON (base64 encoded)
 
-3. **Deploy via GitHub Actions**
-   ```bash
-   git push origin main
-   ```
 
-4. **Manual deployment**
-   See [internal_docs/vm-setup.md](internal_docs/vm-setup.md) for detailed instructions.
+
+## 🏆 Hackathon Submission
+
+**Event:** AI Accelerate: Unlocking New Frontiers
+**Challenge:** Elastic Challenge
+**Submission Date:** October 2025
+**Developer:** Mohan Krishna Alavala
+
+### Hackathon Requirements Compliance
+
+✅ **Google Cloud Integration** - Uses Vertex AI for embeddings (text-embedding-004) and LLM (Gemini 2.5 Flash)
+✅ **Elastic Integration** - Elasticsearch 8.15 for hybrid search (vector + BM25)
+✅ **Open Source** - MIT License, public repository
+✅ **Original Work** - Built from scratch during hackathon period
+✅ **Functional Demo** - Deployed and accessible with video demonstration
+✅ **Documentation** - Comprehensive README, setup instructions, and code comments
 
 ---
 
+## 🙏 Acknowledgments
 
-
-
+- **AI Accelerate Hackathon** - For providing the platform and challenge
+- **Google Cloud** - Vertex AI platform and Gemini models
+- **Elastic** - Elasticsearch hybrid search capabilities
+- **shadcn/ui** - Beautiful, accessible UI components
+- **PubMed, ClinicalTrials.gov, FDA** - Public medical data sources
+- **Open Source Community** - For the amazing tools and libraries
 
 ## 📄 License
 
@@ -216,32 +227,6 @@ This project uses the following open-source libraries and services:
 
 ---
 
-## 🏆 Hackathon Submission
-
-**Event:** AI Accelerate: Unlocking New Frontiers
-**Challenge:** Elastic Challenge
-**Submission Date:** October 2025
-**Developer:** Mohan Krishna Alavala
-
-### Hackathon Requirements Compliance
-
-✅ **Google Cloud Integration** - Uses Vertex AI for embeddings (text-embedding-004) and LLM (Gemini 2.5 Flash)
-✅ **Elastic Integration** - Elasticsearch 8.15 for hybrid search (vector + BM25)
-✅ **Open Source** - MIT License, public repository
-✅ **Original Work** - Built from scratch during hackathon period
-✅ **Functional Demo** - Deployed and accessible with video demonstration
-✅ **Documentation** - Comprehensive README, setup instructions, and code comments
-
----
-
-## 🙏 Acknowledgments
-
-- **AI Accelerate Hackathon** - For providing the platform and challenge
-- **Google Cloud** - Vertex AI platform and Gemini models
-- **Elastic** - Elasticsearch hybrid search capabilities
-- **shadcn/ui** - Beautiful, accessible UI components
-- **PubMed, ClinicalTrials.gov, FDA** - Public medical data sources
-- **Open Source Community** - For the amazing tools and libraries
 
 ---
 
