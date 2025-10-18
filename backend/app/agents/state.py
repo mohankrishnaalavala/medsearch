@@ -56,12 +56,21 @@ class AgentState(TypedDict):
     # Synthesis
     final_response: Optional[str]
     """Synthesized final response"""
-    
+
     citations: Optional[List[Dict[str, Any]]]
     """List of citations with metadata"""
-    
+
     confidence_score: Optional[float]
     """Overall confidence score (0-1)"""
+
+    confidence_band: Optional[str]
+    """Confidence band (Low/Medium/High)"""
+
+    conflicts_detected: Optional[bool]
+    """Whether contradictory evidence was found"""
+
+    consensus_summary: Optional[str]
+    """Summary of consensus vs contradictions"""
     
     # Metadata
     agents_used: List[str]
@@ -155,14 +164,22 @@ class SynthesisInput(BaseModel):
 
 class SynthesisOutput(BaseModel):
     """Output from synthesis agent."""
-    
+
     final_response: str = Field(..., description="Synthesized response")
     citations: List[Dict[str, Any]] = Field(
         default_factory=list, description="Citations used"
     )
     confidence_score: float = Field(..., ge=0, le=1, description="Overall confidence")
+    confidence_band: str = Field(default="Medium", description="Confidence band (Low/Medium/High)")
     key_findings: List[str] = Field(
         default_factory=list, description="Key findings extracted"
+    )
+    conflicts_detected: bool = Field(default=False, description="Whether contradictory evidence was found")
+    consensus_summary: Optional[str] = Field(default=None, description="Summary of consensus vs contradictions")
+    disclaimer: str = Field(
+        default="This information is for educational purposes only and is not medical advice. "
+        "Always consult with a qualified healthcare professional for medical decisions.",
+        description="Medical disclaimer"
     )
 
 

@@ -11,6 +11,13 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 from app.agents.workflow import get_workflow
+from app.core.safety import (
+    check_unsafe_content,
+    get_crisis_resources,
+    log_search_audit,
+    sanitize_response,
+    validate_filters,
+)
 from app.database import get_db
 from app.models.schemas import SearchRequest, SearchResponse, SearchResult
 from app.services.elasticsearch_service import get_elasticsearch_service
@@ -25,15 +32,36 @@ limiter = Limiter(key_func=get_remote_address)
 
 
 @router.post("/api/v1/search", response_model=SearchResponse)
-# @limiter.limit("10/minute")  # Temporarily disabled for testing
-async def create_search(search_request: SearchRequest) -> SearchResponse:
+@limiter.limit("20/minute")  # Rate limiting: 20 requests per minute
+async def create_search(search_request: SearchRequest, request: Request) -> SearchResponse:
     """
     Create a new search request.
 
     This endpoint initiates a search and returns a search_id.
     Clients should connect to WebSocket to receive real-time updates.
+
+    Safety features:
+    - Rate limiting (20/minute)
+    - Unsafe content detection
+    - Filter validation
+    - PII-free audit logging
     """
     try:
+        # Check for unsafe content
+        is_unsafe, reason = check_unsafe_content(search_request.query)
+        if is_unsafe:
+            logger.warning(f"Unsafe query blocked: {reason}")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Query blocked: {reason}. {get_crisis_resources() if 'harm' in reason.lower() else ''}"
+            )
+
+        # Validate filters
+        if search_request.filters:
+            is_valid, error_msg = validate_filters(search_request.filters)
+            if not is_valid:
+                raise HTTPException(status_code=400, detail=error_msg)
+
         # Generate search ID
         search_id = str(uuid.uuid4())
 
@@ -53,7 +81,6 @@ async def create_search(search_request: SearchRequest) -> SearchResponse:
         logger.info(f"Created search session: {search_id}")
         logger.debug(f"Search query: {search_request.query[:100]}")
 
-
         return SearchResponse(
             search_id=search_id,
             status="processing",
@@ -61,6 +88,8 @@ async def create_search(search_request: SearchRequest) -> SearchResponse:
             message="Search initiated successfully. Connect to WebSocket for updates.",
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error creating search: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -254,6 +283,19 @@ async def handle_search_start(
             agents_used = final_state.get("agents_used", [])
 
             execution_time = time.time() - start_time
+
+            # Apply safety guardrails: sanitize response with disclaimer
+            final_response = sanitize_response(final_response, query)
+
+            # Audit logging (PII-free)
+            log_search_audit(
+                query=query,
+                user_id=user_id,
+                search_id=search_id,
+                result_count=len(citations),
+                confidence_score=confidence_score,
+                filters=filters,
+            )
 
             # Determine if this is a successful result worth caching
             is_successful = (

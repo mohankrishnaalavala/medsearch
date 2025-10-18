@@ -1,12 +1,90 @@
 """Synthesis agent for combining and synthesizing results from all agents."""
 
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from app.agents.state import SynthesisInput, SynthesisOutput
 from app.services.vertex_ai_service import get_vertex_ai_service
 
 logger = logging.getLogger(__name__)
+
+
+async def detect_conflicts(
+    research_results: List[Dict[str, Any]],
+    clinical_results: List[Dict[str, Any]],
+    drug_results: List[Dict[str, Any]],
+    query: str,
+) -> tuple[bool, str]:
+    """
+    Detect contradictory conclusions in top-k results.
+
+    Args:
+        research_results: Research results
+        clinical_results: Clinical trial results
+        drug_results: Drug information results
+        query: Original query
+
+    Returns:
+        Tuple of (conflicts_detected, consensus_summary)
+    """
+    all_results = (research_results or [])[:5] + (clinical_results or [])[:3] + (drug_results or [])[:2]
+
+    if len(all_results) < 2:
+        return False, ""
+
+    try:
+        vertex_ai_service = get_vertex_ai_service()
+
+        # Build conflict detection prompt
+        prompt_parts = [
+            f"Query: {query}\n\n",
+            "Analyze the following research findings for contradictions or consensus:\n\n"
+        ]
+
+        for i, result in enumerate(all_results, 1):
+            title = result.get("title", "")
+            abstract = result.get("abstract", "")[:300]
+            conclusion = result.get("conclusion", "")[:200]
+
+            prompt_parts.append(f"[{i}] {title}\n")
+            if abstract:
+                prompt_parts.append(f"   Abstract: {abstract}...\n")
+            if conclusion:
+                prompt_parts.append(f"   Conclusion: {conclusion}...\n")
+            prompt_parts.append("\n")
+
+        prompt_parts.append(
+            "\nAnalyze these findings and respond in JSON format:\n"
+            '{"conflicts_detected": true/false, "consensus_summary": "brief summary"}\n\n'
+            "Conflicts exist if studies reach opposite conclusions on the same question. "
+            "Consensus exists if most studies agree. "
+            "If conflicts exist, summarize both sides. If consensus, state the agreement."
+        )
+
+        response = await vertex_ai_service.generate_chat_response(
+            prompt="".join(prompt_parts),
+            system_instruction="You are a medical research analyst. Detect contradictions and consensus in research findings.",
+            temperature=0.0,
+            max_output_tokens=500,
+        )
+
+        # Parse JSON response
+        import json
+        import re
+
+        # Extract JSON from response
+        json_match = re.search(r'\{[^}]+\}', response)
+        if json_match:
+            result = json.loads(json_match.group())
+            conflicts = result.get("conflicts_detected", False)
+            summary = result.get("consensus_summary", "")
+            return conflicts, summary
+
+        return False, ""
+
+    except Exception as e:
+        logger.warning(f"Conflict detection failed: {e}")
+        return False, ""
 
 
 def calculate_confidence_score(
@@ -53,6 +131,70 @@ def calculate_confidence_score(
     final_score = min(base_score + quality_bonus, 1.0)
 
     return round(final_score, 2)
+
+
+def get_confidence_band(confidence_score: float, result_count: int, recency_score: float = 0.5) -> str:
+    """
+    Derive confidence band from evidence count, agreement, and recency.
+
+    Args:
+        confidence_score: Overall confidence score (0-1)
+        result_count: Number of supporting results
+        recency_score: Recency score (0-1, where 1 is most recent)
+
+    Returns:
+        Confidence band: "Low", "Medium", or "High"
+    """
+    # Weighted score combining multiple factors
+    weighted_score = (
+        confidence_score * 0.5 +  # 50% from confidence
+        min(result_count / 10.0, 1.0) * 0.3 +  # 30% from result count
+        recency_score * 0.2  # 20% from recency
+    )
+
+    if weighted_score >= 0.7:
+        return "High"
+    elif weighted_score >= 0.4:
+        return "Medium"
+    else:
+        return "Low"
+
+
+def calculate_recency_score(results: List[Dict[str, Any]]) -> float:
+    """
+    Calculate recency score based on publication dates.
+
+    Args:
+        results: List of results with publication_date field
+
+    Returns:
+        Recency score (0-1)
+    """
+    from datetime import datetime
+
+    if not results:
+        return 0.5
+
+    current_year = datetime.now().year
+    recency_scores = []
+
+    for result in results:
+        pub_date = result.get("publication_date", "")
+        if pub_date:
+            try:
+                # Extract year from various date formats
+                if len(pub_date) >= 4:
+                    year = int(pub_date[:4])
+                    years_old = current_year - year
+                    # Score: 1.0 for current year, decreasing by 0.1 per year
+                    score = max(1.0 - (years_old * 0.1), 0.0)
+                    recency_scores.append(score)
+            except (ValueError, TypeError):
+                continue
+
+    if recency_scores:
+        return sum(recency_scores) / len(recency_scores)
+    return 0.5
 
 
 def extract_citations(
@@ -132,6 +274,7 @@ async def synthesize_results(
     drug_results: List[Dict[str, Any]],
     use_escalation: bool = False,
     conversation_history: List[Dict[str, str]] = None,
+    filters: Optional[Dict[str, Any]] = None,
 ) -> SynthesisOutput:
     """
     Synthesize results from all agents into a coherent response.
@@ -199,12 +342,24 @@ async def synthesize_results(
         research_results, clinical_results, drug_results
     )
 
+    # Calculate recency score
+    all_results = research_results + clinical_results + drug_results
+    recency_score = calculate_recency_score(all_results)
+
+    # Get confidence band
+    confidence_band = get_confidence_band(confidence_score, total_results, recency_score)
+
+    # Detect conflicts
+    conflicts_detected, consensus_summary = await detect_conflicts(
+        research_results, clinical_results, drug_results, query
+    )
+
     # Extract citations
     citations = extract_citations(research_results, clinical_results, drug_results)
 
     # Build synthesis prompt
     prompt = _build_synthesis_prompt(
-        query, research_results, clinical_results, drug_results
+        query, research_results, clinical_results, drug_results, conflicts_detected, consensus_summary, filters
     )
 
     try:
@@ -254,7 +409,10 @@ Remember: It's better to provide partial, accurate information with clear limita
             final_response=final_response.strip(),
             citations=citations,
             confidence_score=confidence_score,
+            confidence_band=confidence_band,
             key_findings=key_findings,
+            conflicts_detected=conflicts_detected,
+            consensus_summary=consensus_summary if conflicts_detected else None,
         )
 
     except Exception as e:
@@ -269,7 +427,9 @@ Remember: It's better to provide partial, accurate information with clear limita
             final_response=fallback_response,
             citations=citations,
             confidence_score=max(confidence_score - 0.2, 0.0),
+            confidence_band="Low",
             key_findings=[],
+            conflicts_detected=False,
         )
 
 
@@ -278,9 +438,33 @@ def _build_synthesis_prompt(
     research_results: List[Dict[str, Any]],
     clinical_results: List[Dict[str, Any]],
     drug_results: List[Dict[str, Any]],
+    conflicts_detected: bool = False,
+    consensus_summary: str = "",
+    filters: Optional[Dict[str, Any]] = None,
 ) -> str:
     """Build the synthesis prompt for Vertex AI."""
     prompt_parts = [f"Query: {query}\n\n"]
+
+    # Add filter information if present
+    if filters:
+        prompt_parts.append("🔍 Applied Filters:\n")
+        if "year_range" in filters:
+            year_range = filters["year_range"]
+            start = year_range.get("start", "")
+            end = year_range.get("end", "")
+            if start or end:
+                prompt_parts.append(f"  - Year range: {start or 'any'} to {end or 'current'}\n")
+        if "study_types" in filters and filters["study_types"]:
+            prompt_parts.append(f"  - Study types: {', '.join(filters['study_types'])}\n")
+        if "sources" in filters and filters["sources"]:
+            prompt_parts.append(f"  - Sources: {', '.join(filters['sources'])}\n")
+        prompt_parts.append("\nNOTE: All results below have been filtered according to these criteria.\n\n")
+
+    # Add conflict/consensus information if detected
+    if conflicts_detected and consensus_summary:
+        prompt_parts.append("⚠️ IMPORTANT - Contradictory Evidence Detected:\n")
+        prompt_parts.append(f"{consensus_summary}\n\n")
+        prompt_parts.append("Please address both perspectives in your synthesis and explain the contradictions.\n\n")
 
     # Add research findings
     if research_results:
@@ -288,6 +472,8 @@ def _build_synthesis_prompt(
         for i, result in enumerate(research_results[:5], 1):
             prompt_parts.append(f"[{i}] {result.get('title', '')}\n")
             abstract = result.get("abstract", "")[:300]
+            pub_date = result.get("publication_date", "")
+            prompt_parts.append(f"   Published: {pub_date}\n")
             prompt_parts.append(f"   {abstract}...\n\n")
 
     # Add clinical trial findings
@@ -310,8 +496,15 @@ def _build_synthesis_prompt(
 
     prompt_parts.append(
         "\nSynthesize these findings into a comprehensive response to the query. "
-        "Use citation numbers [1], [2], etc. to reference sources."
+        "CRITICAL: Use citation numbers [1], [2], etc. for EVERY factual claim. "
+        "No claim should appear without at least one citation."
     )
+
+    if conflicts_detected:
+        prompt_parts.append(
+            "\n\nIMPORTANT: Address the contradictory evidence noted above. "
+            "Present both perspectives fairly and explain possible reasons for the discrepancy."
+        )
 
     return "".join(prompt_parts)
 
