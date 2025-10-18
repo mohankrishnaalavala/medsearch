@@ -54,12 +54,12 @@ MedSearch AI transforms medical research through intelligent multi-agent orchest
 
 ### Demo Links
 
-🎥 **Submission Video** (≤ 3 min): [Coming Soon]
-🌐 **Live App**: https://medsearch.mohankrishna.site/
-📘 **Technical Details**: [docs/TECHNICAL_DETAILS.md](docs/TECHNICAL_DETAILS.md)
-🤝 **Contributing Guide**: [CONTRIBUTING.md](CONTRIBUTING.md)
-📄 **Medium Post**: [Coming Soon]
-📄 **LinkedIn Post**: [Coming Soon]
+- 🎥 **Submission Video** (≤ 3 min): [Coming Soon]
+- 🌐 **Live App**: https://medsearch.mohankrishna.site/
+- 📘 **Technical Details**: [TECHNICAL_DETAILS.md](TECHNICAL_DETAILS.md)
+- 🤝 **Contributing Guide**: [CONTRIBUTING.md](CONTRIBUTING.md)
+- 📄 **Medium Post**: [Coming Soon]
+- 📄 **LinkedIn Post**: [Coming Soon]
 
 ### Key Features
 
@@ -119,7 +119,7 @@ MedSearch AI transforms medical research through intelligent multi-agent orchest
 
 ---
 
-## � Why Elastic + Google Cloud
+## � Elastic + Google Cloud
 
 How these two platforms directly helped this project ship fast with quality:
 
