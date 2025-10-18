@@ -140,9 +140,9 @@ Together, these platforms gave us production-grade relevance with minimal glue c
 
 1. Open the live app: https://medsearch.mohankrishna.site/
 2. Enter a query (examples):
-   - "pollen treatments"
-   - "allergic rhinitis immunotherapy"
-   - "metformin side effects in elderly"
+   - "What are the latest treatments for Type 2 diabetes in elderly patients?"
+   - "What are the current treatment options for Type 2 diabetes in patients over 65?"
+   - "metformin side effects in elders?"
 3. Observe streaming updates (research → clinical → drug → synthesis) in a few seconds.
 4. Verify the final answer includes citations; expand them to view titles, journal/phase/status, and dates.
 5. Ask a follow-up question to see conversation context retention.
