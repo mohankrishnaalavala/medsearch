@@ -70,7 +70,7 @@ export function useUrlFilters() {
           params.set('year_start', newFilters.year_range.start.toString());
         }
         if (newFilters.year_range.end) {
-          params.set('year_range.end', newFilters.year_range.end.toString());
+          params.set('year_end', newFilters.year_range.end.toString());
         }
       }
 

@@ -17,7 +17,13 @@ export interface SearchFilters {
     start: Date;
     end: Date;
   };
+  // Optional coarse year range, used for URL params
+  year_range?: {
+    start?: number;
+    end?: number;
+  };
   sources?: ('pubmed' | 'clinical_trials' | 'fda')[];
+  study_types?: string[];
   minConfidence?: number;
   sortBy?: 'date' | 'relevance' | 'confidence';
 }
