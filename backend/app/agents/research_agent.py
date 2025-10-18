@@ -8,6 +8,7 @@ from app.agents.state import SearchResult
 from app.services.elasticsearch_service import get_elasticsearch_service
 from app.services.redis_service import get_redis_service
 from app.services.vertex_ai_service import get_vertex_ai_service
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +70,7 @@ async def execute_research_agent(
         search_results = []
         for result in results:
             search_result = {
-                "id": result.get("_id", result.get("pmid", "unknown")),
+                "id": result.get("_id", result.get("pmid", "")),
                 "source_type": "pubmed",
                 "title": result.get("title", ""),
                 "abstract": result.get("abstract", ""),
@@ -85,6 +86,18 @@ async def execute_research_agent(
                 },
             }
             search_results.append(search_result)
+
+        # Optional Gemini-based reranking (single per-call)
+        if settings.VERTEX_AI_RERANK_ENABLED:
+            try:
+                search_results = await vertex_ai_service.rerank_results(
+                    query=query,
+                    results=search_results,
+                    text_fields=["abstract"],
+                    top_k=settings.VERTEX_AI_RERANK_TOP_K,
+                )
+            except Exception as e:
+                logger.warning(f"Rerank skipped due to error: {e}")
 
         logger.info(f"Research agent found {len(search_results)} results")
         return search_results

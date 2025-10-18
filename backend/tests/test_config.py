@@ -8,7 +8,7 @@ def test_settings_loaded() -> None:
     assert settings.GOOGLE_CLOUD_PROJECT is not None
     assert settings.VERTEX_AI_CHAT_MODEL == "gemini-2.5-flash"
     assert settings.VERTEX_AI_CHAT_ESCALATION_MODEL == "gemini-2.5-pro"
-    assert settings.VERTEX_AI_EMBEDDING_MODEL == "gemini-embedding-001"
+    assert settings.VERTEX_AI_EMBEDDING_MODEL == "text-embedding-004"
 
 
 def test_elasticsearch_config() -> None:

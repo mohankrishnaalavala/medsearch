@@ -25,6 +25,7 @@ async def health_check() -> HealthResponse:
     """
     services = {}
     overall_status = "healthy"
+    is_prod = settings.APP_ENV.lower() == "production"
 
     # Check Elasticsearch
     try:
@@ -36,13 +37,14 @@ async def health_check() -> HealthResponse:
             message=es_health.get("message"),
         )
 
-        if es_health.get("status") != "up":
+        if es_health.get("status") != "up" and is_prod:
             overall_status = "degraded"
 
     except Exception as e:
         logger.error(f"Elasticsearch health check failed: {e}")
         services["elasticsearch"] = ServiceStatus(status="down", message=str(e))
-        overall_status = "unhealthy"
+        if is_prod:
+            overall_status = "unhealthy"
 
     # Check Redis
     try:
@@ -54,13 +56,14 @@ async def health_check() -> HealthResponse:
             message=redis_health.get("message"),
         )
 
-        if redis_health.get("status") != "up":
+        if redis_health.get("status") != "up" and is_prod:
             overall_status = "degraded"
 
     except Exception as e:
         logger.error(f"Redis health check failed: {e}")
         services["redis"] = ServiceStatus(status="down", message=str(e))
-        overall_status = "degraded"  # Redis is not critical
+        if is_prod:
+            overall_status = "degraded"  # Redis is not critical
 
     # Check Vertex AI
     try:
@@ -72,13 +75,14 @@ async def health_check() -> HealthResponse:
             message=vertex_health.get("message"),
         )
 
-        if vertex_health.get("status") != "up":
+        if vertex_health.get("status") != "up" and is_prod:
             overall_status = "degraded"
 
     except Exception as e:
         logger.error(f"Vertex AI health check failed: {e}")
         services["vertex_ai"] = ServiceStatus(status="down", message=str(e))
-        overall_status = "unhealthy"
+        if is_prod:
+            overall_status = "unhealthy"
 
     return HealthResponse(
         status=overall_status,

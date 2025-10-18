@@ -116,14 +116,12 @@ async def create_elasticsearch_indices(es_client: AsyncElasticsearch) -> None:
 
     for index_name, mapping in indices.items():
         try:
-            # Delete if exists
-            if await es_client.indices.exists(index=index_name):
-                await es_client.indices.delete(index=index_name)
-                logger.info(f"Deleted existing index: {index_name}")
-
-            # Create new index
-            await es_client.indices.create(index=index_name, body=mapping)
-            logger.info(f"Created index: {index_name}")
+            # Create index only if it doesn't exist
+            if not await es_client.indices.exists(index=index_name):
+                await es_client.indices.create(index=index_name, body=mapping)
+                logger.info(f"Created index: {index_name}")
+            else:
+                logger.info(f"Index already exists: {index_name}")
 
         except Exception as e:
             logger.error(f"Error creating index {index_name}: {e}")

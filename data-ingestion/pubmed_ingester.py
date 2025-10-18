@@ -65,9 +65,10 @@ class PubMedIngester:
         params = {
             "db": "pubmed",
             "term": query,
-            "retmax": min(max_results, 10000),
+            "retmax": min(max_results, 1000),
             "retstart": retstart,
             "retmode": "json",
+            "sort": "relevance",
             "api_key": self.api_key,
         }
 
@@ -85,7 +86,8 @@ class PubMedIngester:
                     logger.info(f"Found {len(pmids)} article IDs")
                     return pmids
                 else:
-                    logger.error(f"Search failed with status {response.status}")
+                    error_text = await response.text()
+                    logger.error(f"Search failed with status {response.status}: {error_text[:200]}")
                     return []
 
     async def fetch_article_details(self, pmids: List[str]) -> List[Dict[str, Any]]:
@@ -121,7 +123,8 @@ class PubMedIngester:
                     xml_data = await response.text()
                     return self._parse_pubmed_xml(xml_data)
                 else:
-                    logger.error(f"Fetch failed with status {response.status}")
+                    error_text = await response.text()
+                    logger.error(f"Fetch failed with status {response.status}: {error_text[:200]}")
                     return []
 
     def _parse_pubmed_xml(self, xml_data: str) -> List[Dict[str, Any]]:

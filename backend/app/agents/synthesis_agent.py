@@ -170,8 +170,25 @@ async def synthesize_results(
         if conversation_history:
             context_msg = f"\n\nNote: This is a follow-up to our previous conversation about {conversation_history[-1].get('query', 'your earlier question')}."
 
+        # Fetch live corpus sizes to avoid misleading '0' claims
+        try:
+            from app.services.elasticsearch_service import get_elasticsearch_service
+            es_service = await get_elasticsearch_service()
+            index_counts = await es_service.get_index_counts()
+        except Exception:
+            index_counts = {"pubmed": 0, "trials": 0, "drugs": 0}
+
         return SynthesisOutput(
-            final_response=f"I apologize, but I couldn't find any relevant information in the medical databases for your query: \"{query}\".{context_msg}\n\nThis could be because:\n\n1. **Emerging or highly specific topic** - The research may not yet be indexed in our databases\n2. **Different terminology** - Medical terms vary; try alternative phrasing\n3. **Limited scope** - Our database contains {len(research_results)} PubMed articles, {len(clinical_results)} clinical trials, and {len(drug_results)} FDA drug entries\n\nSuggestions:\n- Rephrase using different medical terms\n- Break complex questions into simpler parts\n- Ask about related topics that might have more research\n- Try broader search terms first, then narrow down",
+            final_response=(
+                f"I couldn't find results for this specific query: \"{query}\".{context_msg}\n\n"
+                "This query returned 0 matches across sources.\n"
+                f"Current corpus sizes — PubMed: {index_counts['pubmed']}, Clinical trials: {index_counts['trials']}, FDA drugs: {index_counts['drugs']}.\n\n"
+                "Suggestions:\n"
+                "- Try alternative medical terms (e.g., use the clinical name)\n"
+                "- Break the question into smaller, focused parts\n"
+                "- Ask about related topics that may have more literature\n"
+                "- Start broader, then narrow down (use filters if needed)"
+            ),
             citations=[],
             confidence_score=0.0,
             key_findings=[],

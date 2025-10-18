@@ -2,7 +2,7 @@
 
 import logging
 import os
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 import vertexai
 from google.auth import default
@@ -133,6 +133,110 @@ class VertexAIService:
         except Exception as e:
             logger.error(f"Error generating embeddings batch: {e}")
             raise
+
+    async def rerank_results(
+        self,
+        query: str,
+        results: List[Dict[str, Any]],
+        text_fields: Optional[List[str]] = None,
+        top_k: Optional[int] = None,
+    ) -> List[Dict[str, Any]]:
+        """Optionally re-rank results using a single per-call Gemini scoring.
+
+        This uses the chat model (Flash/Pro) to assign a relevance score 0.0-1.0 to
+        each candidate relative to the query, then sorts by that score. To control
+        cost, we (a) truncate content, (b) score up to top_k items in one call.
+        """
+        if not self._initialized:
+            self.initialize()
+
+        if not results:
+            return results
+
+        try:
+            fields = text_fields or [
+                "abstract",
+                "description",
+                "brief_summary",
+                "detailed_description",
+                "indications",
+                "warnings",
+            ]
+            k = max(1, min(len(results), top_k or settings.VERTEX_AI_RERANK_TOP_K))
+            subset = results[:k]
+
+            # Prepare compact items
+            serializable: List[Dict[str, str]] = []
+            for r in subset:
+                rid = str(r.get("id") or r.get("_id") or "")
+                title = str(r.get("title") or r.get("drug_name") or "")
+                text = ""
+                for f in fields:
+                    val = r.get(f)
+                    if val:
+                        text = str(val)
+                        break
+                if not text:
+                    # fallback to any long-ish string fields
+                    for f, v in r.items():
+                        if isinstance(v, str) and len(v) > 50:
+                            text = v
+                            break
+                # Truncate to control tokens
+                text = text[:600]
+                serializable.append({"id": rid, "title": title[:120], "text": text})
+
+            instruction = (
+                "You are a strict scoring function. For the given user query, score each item "
+                "for relevance between 0.0 and 1.0 (float). Return ONLY a JSON array with objects "
+                "{\"id\": string, \"score\": number}. No extra text."
+            )
+            numbered_items = []
+            for i, it in enumerate(serializable, start=1):
+                numbered_items.append(
+                    f"{i}. id={it['id']}\nTitle: {it['title']}\nText: {it['text']}"
+                )
+            prompt = (
+                f"Query: {query}\n\n{instruction}\n\nItems to score:\n" + "\n\n".join(numbered_items)
+            )
+
+            generation_config = {
+                "temperature": 0.0,
+                "max_output_tokens": 512,
+                "top_p": 0.9,
+                "top_k": 40,
+            }
+
+            model = self.chat_model
+            response = model.generate_content(prompt, generation_config=generation_config)
+            raw = (response.text or "").strip()
+
+            # Extract JSON array
+            import json as _json
+
+            def _extract_json_array(s: str) -> str:
+                lb = s.find("[")
+                rb = s.rfind("]")
+                if lb != -1 and rb != -1 and rb > lb:
+                    return s[lb : rb + 1]
+                return s
+
+            payload = _extract_json_array(raw)
+            scored = _json.loads(payload)
+            score_map = {str(e.get("id")): float(e.get("score", 0.0)) for e in scored if e}
+
+            # Merge back into results
+            out = []
+            for r in results:
+                rid = str(r.get("id") or r.get("_id") or "")
+                r_copy = dict(r)
+                r_copy["rerank_score"] = score_map.get(rid, r_copy.get("relevance_score", 0.0))
+                out.append(r_copy)
+            out.sort(key=lambda x: x.get("rerank_score", 0.0), reverse=True)
+            return out
+        except Exception as e:
+            logger.warning(f"Rerank failed, returning original order: {e}")
+            return results
 
     async def generate_chat_response(
         self,

@@ -17,6 +17,8 @@ elasticsearch==8.15.1
 google-cloud-aiplatform==1.68.0
 google-auth==2.34.0
 
+google-cloud-secret-manager==2.20.2
+
 # Redis
 redis==5.0.8
 
@@ -50,4 +52,7 @@ black==24.8.0
 
 # Utilities
 python-dotenv==1.0.1
+
+# Observability
+elastic-apm>=6,<7
 

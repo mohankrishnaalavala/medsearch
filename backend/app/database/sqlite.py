@@ -302,8 +302,13 @@ def init_db() -> None:
 
 
 def get_db() -> SQLiteDatabase:
-    """Get global database instance."""
+    """Get global database instance.
+
+    Lazily initializes the database if not already initialized. This makes tests
+    and ad-hoc scripts more robust when lifespan/startup wasn't invoked.
+    """
+    global _db
     if _db is None:
-        raise RuntimeError("Database not initialized. Call init_db() first.")
+        init_db()
     return _db
 
