@@ -56,42 +56,54 @@ async def execute_clinical_agent(
             results = mock_service.get_clinical_trial_results(query, max_results)
             logger.info(f"Using mock clinical trial data: {len(results)} results")
         else:
-            # Generate query embedding if not provided
+            # Generate query embedding if not provided. If embedding generation fails,
+            # use mock data rather than failing the entire agent.
+            force_mock = False
             if query_embedding is None:
-                # Check cache first
-                if redis_available:
-                    cached_embedding = await redis_service.get_embedding(query)
-                    if cached_embedding:
-                        query_embedding = cached_embedding
+                try:
+                    # Check cache first
+                    if redis_available:
+                        cached_embedding = await redis_service.get_embedding(query)
+                        if cached_embedding:
+                            query_embedding = cached_embedding
+                        else:
+                            # Generate new embedding
+                            query_embedding = await vertex_ai_service.generate_embedding(
+                                query, task_type="RETRIEVAL_QUERY"
+                            )
+                            # Cache it
+                            await redis_service.set_embedding(query, query_embedding)
                     else:
-                        # Generate new embedding
+                        # Generate new embedding without caching
                         query_embedding = await vertex_ai_service.generate_embedding(
                             query, task_type="RETRIEVAL_QUERY"
                         )
-                        # Cache it
-                        await redis_service.set_embedding(query, query_embedding)
-                else:
-                    # Generate new embedding without caching
-                    query_embedding = await vertex_ai_service.generate_embedding(
-                        query, task_type="RETRIEVAL_QUERY"
-                    )
+                except Exception as e:
+                    logger.warning(f"Embedding generation failed, using mock clinical trial data: {e}")
+                    force_mock = True
 
-            # Perform hybrid search on clinical trials index (with safe fallback)
-            try:
-                results = await es_service.hybrid_search(
-                    index_name=es_service.indices["trials"],
-                    query_text=query,
-                    query_embedding=query_embedding,
-                    filters=filters,
-                    size=max_results,
-                    keyword_weight=0.4,  # Higher keyword weight for clinical trials
-                    semantic_weight=0.6,
-                )
-            except Exception as e:
-                logger.warning(f"ES trials search failed, using mock data: {e}")
+            if force_mock:
                 from app.services.mock_data_service import get_mock_data_service
                 mock_service = get_mock_data_service()
                 results = mock_service.get_clinical_trial_results(query, max_results)
+                logger.info(f"Using mock clinical trial data due to embedding failure: {len(results)} results")
+            else:
+                # Perform hybrid search on clinical trials index (with safe fallback)
+                try:
+                    results = await es_service.hybrid_search(
+                        index_name=es_service.indices["trials"],
+                        query_text=query,
+                        query_embedding=query_embedding,
+                        filters=filters,
+                        size=max_results,
+                        keyword_weight=0.4,  # Higher keyword weight for clinical trials
+                        semantic_weight=0.6,
+                    )
+                except Exception as e:
+                    logger.warning(f"ES trials search failed, using mock data: {e}")
+                    from app.services.mock_data_service import get_mock_data_service
+                    mock_service = get_mock_data_service()
+                    results = mock_service.get_clinical_trial_results(query, max_results)
 
             # If ES returns no results, use mock fallback to avoid empty UX
             if not results:
@@ -147,7 +159,41 @@ async def execute_clinical_agent(
 
     except Exception as e:
         logger.error(f"Error in clinical trials agent: {e}")
-        return []
+        # Last-resort fallback to mock data instead of returning empty results
+        try:
+            from app.services.mock_data_service import get_mock_data_service
+            mock_service = get_mock_data_service()
+            mock_results = mock_service.get_clinical_trial_results(query, max_results)
+            logger.info(f"Rescued via mock clinical trial data: {len(mock_results)} results")
+
+            # Convert to SearchResult-like format
+            search_results = []
+            for result in mock_results:
+                search_results.append({
+                    "id": result.get("_id", result.get("nct_id", "")),
+                    "source_type": "clinical_trial",
+                    "title": result.get("title", ""),
+                    "abstract": result.get("brief_summary", ""),
+                    "description": result.get("detailed_description", ""),
+                    "nct_id": result.get("nct_id", ""),
+                    "phase": result.get("phase", ""),
+                    "status": result.get("status", ""),
+                    "conditions": result.get("conditions", []),
+                    "interventions": result.get("interventions", []),
+                    "locations": result.get("locations", []),
+                    "start_date": result.get("start_date", ""),
+                    "completion_date": result.get("completion_date", ""),
+                    "sponsors": result.get("sponsors", []),
+                    "relevance_score": min(result.get("_score", 0) / 10.0, 1.0),
+                    "metadata": {
+                        "phase": result.get("phase", ""),
+                        "status": result.get("status", ""),
+                    },
+                })
+            return search_results
+        except Exception as e2:
+            logger.error(f"Mock fallback also failed: {e2}")
+            return []
 
 
 def filter_clinical_trials(

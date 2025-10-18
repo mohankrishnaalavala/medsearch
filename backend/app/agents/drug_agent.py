@@ -56,42 +56,54 @@ async def execute_drug_agent(
             results = mock_service.get_drug_results(query, max_results)
             logger.info(f"Using mock drug data: {len(results)} results")
         else:
-            # Generate query embedding if not provided
+            # Generate query embedding if not provided. If embedding generation fails,
+            # use mock data rather than failing the entire agent.
+            force_mock = False
             if query_embedding is None:
-                # Check cache first
-                if redis_available:
-                    cached_embedding = await redis_service.get_embedding(query)
-                    if cached_embedding:
-                        query_embedding = cached_embedding
+                try:
+                    # Check cache first
+                    if redis_available:
+                        cached_embedding = await redis_service.get_embedding(query)
+                        if cached_embedding:
+                            query_embedding = cached_embedding
+                        else:
+                            # Generate new embedding
+                            query_embedding = await vertex_ai_service.generate_embedding(
+                                query, task_type="RETRIEVAL_QUERY"
+                            )
+                            # Cache it
+                            await redis_service.set_embedding(query, query_embedding)
                     else:
-                        # Generate new embedding
+                        # Generate new embedding without caching
                         query_embedding = await vertex_ai_service.generate_embedding(
                             query, task_type="RETRIEVAL_QUERY"
                         )
-                        # Cache it
-                        await redis_service.set_embedding(query, query_embedding)
-                else:
-                    # Generate new embedding without caching
-                    query_embedding = await vertex_ai_service.generate_embedding(
-                        query, task_type="RETRIEVAL_QUERY"
-                    )
+                except Exception as e:
+                    logger.warning(f"Embedding generation failed, using mock drug data: {e}")
+                    force_mock = True
 
-            # Perform hybrid search on drugs index (with safe fallback)
-            try:
-                results = await es_service.hybrid_search(
-                    index_name=es_service.indices["drugs"],
-                    query_text=query,
-                    query_embedding=query_embedding,
-                    filters=filters,
-                    size=max_results,
-                    keyword_weight=0.5,  # Equal weight for drug searches
-                    semantic_weight=0.5,
-                )
-            except Exception as e:
-                logger.warning(f"ES drugs search failed, using mock data: {e}")
+            if force_mock:
                 from app.services.mock_data_service import get_mock_data_service
                 mock_service = get_mock_data_service()
                 results = mock_service.get_drug_results(query, max_results)
+                logger.info(f"Using mock drug data due to embedding failure: {len(results)} results")
+            else:
+                # Perform hybrid search on drugs index (with safe fallback)
+                try:
+                    results = await es_service.hybrid_search(
+                        index_name=es_service.indices["drugs"],
+                        query_text=query,
+                        query_embedding=query_embedding,
+                        filters=filters,
+                        size=max_results,
+                        keyword_weight=0.5,  # Equal weight for drug searches
+                        semantic_weight=0.5,
+                    )
+                except Exception as e:
+                    logger.warning(f"ES drugs search failed, using mock data: {e}")
+                    from app.services.mock_data_service import get_mock_data_service
+                    mock_service = get_mock_data_service()
+                    results = mock_service.get_drug_results(query, max_results)
 
             # If ES returns no results, use mock fallback to avoid empty UX
             if not results:
@@ -146,7 +158,40 @@ async def execute_drug_agent(
 
     except Exception as e:
         logger.error(f"Error in drug information agent: {e}")
-        return []
+        # Last-resort fallback to mock data instead of returning empty results
+        try:
+            from app.services.mock_data_service import get_mock_data_service
+            mock_service = get_mock_data_service()
+            mock_results = mock_service.get_drug_results(query, max_results)
+            logger.info(f"Rescued via mock drug data: {len(mock_results)} results")
+
+            # Convert to SearchResult-like format
+            search_results = []
+            for result in mock_results:
+                search_results.append({
+                    "id": result.get("_id", result.get("application_number", "")),
+                    "source_type": "fda_drug",
+                    "title": result.get("drug_name", ""),
+                    "generic_name": result.get("generic_name", ""),
+                    "brand_names": result.get("brand_names", []),
+                    "manufacturer": result.get("manufacturer", ""),
+                    "approval_date": result.get("approval_date", ""),
+                    "indications": result.get("indications", ""),
+                    "warnings": result.get("warnings", ""),
+                    "adverse_reactions": result.get("adverse_reactions", ""),
+                    "drug_class": result.get("drug_class", ""),
+                    "route": result.get("route", ""),
+                    "application_number": result.get("application_number", ""),
+                    "relevance_score": min(result.get("_score", 0) / 10.0, 1.0),
+                    "metadata": {
+                        "drug_class": result.get("drug_class", ""),
+                        "route": result.get("route", ""),
+                    },
+                })
+            return search_results
+        except Exception as e2:
+            logger.error(f"Mock fallback also failed: {e2}")
+            return []
 
 
 def rank_drug_results(

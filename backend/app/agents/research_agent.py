@@ -58,45 +58,57 @@ async def execute_research_agent(
             results = mock_service.get_pubmed_results(query, max_results)
             logger.info(f"Using mock PubMed data: {len(results)} results")
         else:
-            # Generate query embedding if not provided
+            # Generate query embedding if not provided. If embedding generation fails,
+            # fall back to mock data instead of failing the whole agent.
+            force_mock = False
             if query_embedding is None:
-                # Check cache first
-                if redis_available:
-                    cached_embedding = await redis_service.get_embedding(query)
-                    if cached_embedding:
-                        query_embedding = cached_embedding
-                        logger.debug("Using cached query embedding")
+                try:
+                    # Check cache first
+                    if redis_available:
+                        cached_embedding = await redis_service.get_embedding(query)
+                        if cached_embedding:
+                            query_embedding = cached_embedding
+                            logger.debug("Using cached query embedding")
+                        else:
+                            # Generate new embedding
+                            query_embedding = await vertex_ai_service.generate_embedding(
+                                query, task_type="RETRIEVAL_QUERY"
+                            )
+                            # Cache it
+                            await redis_service.set_embedding(query, query_embedding)
+                            logger.debug("Generated and cached query embedding")
                     else:
-                        # Generate new embedding
+                        # Generate new embedding without caching
                         query_embedding = await vertex_ai_service.generate_embedding(
                             query, task_type="RETRIEVAL_QUERY"
                         )
-                        # Cache it
-                        await redis_service.set_embedding(query, query_embedding)
-                        logger.debug("Generated and cached query embedding")
-                else:
-                    # Generate new embedding without caching
-                    query_embedding = await vertex_ai_service.generate_embedding(
-                        query, task_type="RETRIEVAL_QUERY"
-                    )
-                    logger.debug("Generated query embedding (no cache)")
+                        logger.debug("Generated query embedding (no cache)")
+                except Exception as e:
+                    logger.warning(f"Embedding generation failed, using mock PubMed data: {e}")
+                    force_mock = True
 
-            # Perform hybrid search on PubMed index (with safe fallback)
-            try:
-                results = await es_service.hybrid_search(
-                    index_name=es_service.indices["pubmed"],
-                    query_text=query,
-                    query_embedding=query_embedding,
-                    filters=filters,
-                    size=max_results,
-                    keyword_weight=0.3,
-                    semantic_weight=0.7,
-                )
-            except Exception as e:
-                logger.warning(f"ES search failed, using mock PubMed data: {e}")
+            if force_mock:
                 from app.services.mock_data_service import get_mock_data_service
                 mock_service = get_mock_data_service()
                 results = mock_service.get_pubmed_results(query, max_results)
+                logger.info(f"Using mock PubMed data due to embedding failure: {len(results)} results")
+            else:
+                # Perform hybrid search on PubMed index (with safe fallback)
+                try:
+                    results = await es_service.hybrid_search(
+                        index_name=es_service.indices["pubmed"],
+                        query_text=query,
+                        query_embedding=query_embedding,
+                        filters=filters,
+                        size=max_results,
+                        keyword_weight=0.3,
+                        semantic_weight=0.7,
+                    )
+                except Exception as e:
+                    logger.warning(f"ES search failed, using mock PubMed data: {e}")
+                    from app.services.mock_data_service import get_mock_data_service
+                    mock_service = get_mock_data_service()
+                    results = mock_service.get_pubmed_results(query, max_results)
 
             # If Elasticsearch returns no results, fall back to mock data to avoid empty UX
             if not results:
@@ -146,7 +158,36 @@ async def execute_research_agent(
 
     except Exception as e:
         logger.error(f"Error in research agent: {e}")
-        return []
+        # Last-resort fallback to mock data instead of returning empty results
+        try:
+            from app.services.mock_data_service import get_mock_data_service
+            mock_service = get_mock_data_service()
+            mock_results = mock_service.get_pubmed_results(query, max_results)
+            logger.info(f"Rescued via mock PubMed data: {len(mock_results)} results")
+
+            # Convert to SearchResult-like format
+            search_results = []
+            for result in mock_results:
+                search_results.append({
+                    "id": result.get("_id", result.get("pmid", "")),
+                    "source_type": "pubmed",
+                    "title": result.get("title", ""),
+                    "abstract": result.get("abstract", ""),
+                    "authors": result.get("authors", []),
+                    "journal": result.get("journal", ""),
+                    "publication_date": result.get("publication_date", ""),
+                    "doi": result.get("doi", ""),
+                    "pmid": result.get("pmid", ""),
+                    "relevance_score": min(result.get("_score", 0) / 10.0, 1.0),
+                    "metadata": {
+                        "mesh_terms": result.get("mesh_terms", []),
+                        "keywords": result.get("keywords", []),
+                    },
+                })
+            return search_results
+        except Exception as e2:
+            logger.error(f"Mock fallback also failed: {e2}")
+            return []
 
 
 async def enrich_research_results(
