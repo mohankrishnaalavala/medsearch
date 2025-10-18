@@ -27,7 +27,7 @@ def _classify_intent(query: str) -> Dict[str, bool]:
     return {"side_effects": side_effects, "geriatrics": geriatrics}
 
 
-a​sync def execute_drug_agent(
+async def execute_drug_agent(
     query: str,
     query_embedding: Optional[List[float]] = None,
     filters: Optional[Dict[str, Any]] = None,
