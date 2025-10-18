@@ -125,8 +125,8 @@ function SettingsContent() {
   if (!user) return null;
 
   return (
-    <ScrollArea className="h-[calc(100vh-3.5rem)]">
-      <main className="max-w-4xl mx-auto px-4 py-8">
+    <ScrollArea className="h-[calc(100vh-3.5rem)] overflow-y-auto">
+      <main className="max-w-4xl mx-auto px-4 py-8 pb-24">
         <h1 className="text-3xl font-bold mb-8">Settings</h1>
 
         <div className="space-y-6">

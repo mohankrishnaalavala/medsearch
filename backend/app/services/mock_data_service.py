@@ -67,6 +67,18 @@ class MockDataService:
                 "keywords": ["insulin therapy", "elderly", "type 2 diabetes", "hypoglycemia"],
             },
             {
+                "_id": "pmid_38123461",
+                "_score": 0.83,
+                "pmid": "38123461",
+                "title": "Allergic Rhinitis due to Pollen: Efficacy of Modern Antihistamines and Immunotherapy",
+                "abstract": "Allergic rhinitis triggered by seasonal pollen is highly prevalent. This review summarizes randomized trials of second-generation antihistamines (cetirizine, loratadine) and allergen immunotherapy. Findings: symptomatic relief within hours and durable disease modification with immunotherapy.",
+                "authors": ["Singh R", "Patel K", "Nguyen T"],
+                "journal": "Allergy",
+                "publication_date": "2023-04-12",
+                "doi": "10.1111/all.123456",
+                "mesh_terms": ["Rhinitis, Allergic, Seasonal", "Pollen", "Desensitization, Immunologic"],
+                "keywords": ["pollen", "allergic rhinitis", "cetirizine", "immunotherapy"]
+            },
                 "_id": "pmid_38123460",
                 "_score": 0.82,
                 "pmid": "38123460",
@@ -93,11 +105,11 @@ class MockDataService:
                 + " "
                 + " ".join(article["keywords"]).lower()
             )
-            
+
             # Simple relevance: count matching words
             query_words = query_lower.split()
             matches = sum(1 for word in query_words if len(word) > 3 and word in searchable_text)
-            
+
             if matches > 0 or len(filtered) < 2:  # Always return at least 2 results
                 article["_score"] = 0.9 - (len(filtered) * 0.05)  # Decreasing scores
                 filtered.append(article)
@@ -173,6 +185,22 @@ class MockDataService:
                 "sponsors": ["Dexcom, Inc."],
             },
             {
+                "_id": "nct_05999999",
+                "_score": 0.83,
+                "nct_id": "NCT05999999",
+                "title": "Subcutaneous Allergen Immunotherapy for Seasonal Allergic Rhinitis due to Pollen",
+                "brief_summary": "Randomized, double-blind, placebo-controlled trial evaluating efficacy of pre-seasonal pollen allergen immunotherapy in adults with moderate-to-severe allergic rhinitis.",
+                "detailed_description": "Primary endpoint: Total nasal symptom score during peak pollen season. Secondary: rescue medication use, quality of life, safety.",
+                "conditions": ["Rhinitis, Allergic, Seasonal", "Pollen Allergy"],
+                "interventions": ["Allergen Immunotherapy", "Placebo"],
+                "phase": "Phase 3",
+                "status": "Recruiting",
+                "start_date": "2024-12-01",
+                "completion_date": "2026-09-30",
+                "locations": ["United States", "Europe"],
+                "sponsors": ["AllergoPharma"]
+            },
+            {
                 "_id": "nct_05123460",
                 "_score": 0.81,
                 "nct_id": "NCT05123460",
@@ -201,10 +229,10 @@ class MockDataService:
                 + " "
                 + " ".join(trial["conditions"]).lower()
             )
-            
+
             query_words = query_lower.split()
             matches = sum(1 for word in query_words if len(word) > 3 and word in searchable_text)
-            
+
             if matches > 0 or len(filtered) < 2:
                 trial["_score"] = 0.9 - (len(filtered) * 0.05)
                 filtered.append(trial)
@@ -229,6 +257,21 @@ class MockDataService:
                 "adverse_reactions": "Most common adverse reactions (>5%): diarrhea, nausea/vomiting, flatulence, asthenia, indigestion, abdominal discomfort, and headache.",
                 "drug_class": "Biguanide",
                 "route": "Oral",
+            },
+            {
+                "_id": "drug_cetirizine",
+                "_score": 0.86,
+                "drug_name": "Cetirizine",
+                "generic_name": "cetirizine hydrochloride",
+                "brand_names": ["Zyrtec"],
+                "application_number": "NDA019835",
+                "manufacturer": "Johnson & Johnson",
+                "approval_date": "1995-12-23",
+                "indications": "Relief of symptoms associated with seasonal allergic rhinitis (pollen) and perennial allergic rhinitis; treatment of chronic idiopathic urticaria.",
+                "warnings": "Somnolence may occur. Use with caution in patients with hepatic or renal impairment.",
+                "adverse_reactions": "Most common: drowsiness, fatigue, dry mouth.",
+                "drug_class": "Second-generation antihistamine",
+                "route": "Oral"
             },
             {
                 "_id": "drug_semaglutide",
@@ -275,10 +318,10 @@ class MockDataService:
                 + " "
                 + drug["indications"].lower()
             )
-            
+
             query_words = query_lower.split()
             matches = sum(1 for word in query_words if len(word) > 3 and word in searchable_text)
-            
+
             if matches > 0 or len(filtered) < 1:
                 drug["_score"] = 0.9 - (len(filtered) * 0.05)
                 filtered.append(drug)

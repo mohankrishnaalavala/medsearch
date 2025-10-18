@@ -86,6 +86,16 @@ async def execute_drug_agent(
                 keyword_weight=0.5,  # Equal weight for drug searches
                 semantic_weight=0.5,
             )
+            # If ES returns no results, use mock fallback to avoid empty UX
+            if not results:
+                try:
+                    from app.services.mock_data_service import get_mock_data_service
+                    mock_service = get_mock_data_service()
+                    results = mock_service.get_drug_results(query, max_results)
+                    logger.info(f"ES returned 0 results; using mock FDA drug data: {len(results)} results")
+                except Exception as e:
+                    logger.warning(f"Mock fallback failed: {e}")
+
 
         # Convert to SearchResult format
         search_results = []
