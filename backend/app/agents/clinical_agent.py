@@ -33,34 +33,59 @@ async def execute_clinical_agent(
 
     try:
         # Get services
-        es_service = await get_elasticsearch_service()
-        redis_service = await get_redis_service()
+        try:
+            es_service = await get_elasticsearch_service()
+            es_available = True
+        except Exception as e:
+            logger.warning(f"Elasticsearch not available, using mock data: {e}")
+            es_available = False
+
+        try:
+            redis_service = await get_redis_service()
+            redis_available = True
+        except Exception as e:
+            logger.warning(f"Redis not available, skipping cache: {e}")
+            redis_available = False
+
         vertex_ai_service = get_vertex_ai_service()
 
-        # Generate query embedding if not provided
-        if query_embedding is None:
-            # Check cache first
-            cached_embedding = await redis_service.get_embedding(query)
-            if cached_embedding:
-                query_embedding = cached_embedding
-            else:
-                # Generate new embedding
-                query_embedding = await vertex_ai_service.generate_embedding(
-                    query, task_type="RETRIEVAL_QUERY"
-                )
-                # Cache it
-                await redis_service.set_embedding(query, query_embedding)
+        # Use mock data if Elasticsearch is not available
+        if not es_available:
+            from app.services.mock_data_service import get_mock_data_service
+            mock_service = get_mock_data_service()
+            results = mock_service.get_clinical_trial_results(query, max_results)
+            logger.info(f"Using mock clinical trial data: {len(results)} results")
+        else:
+            # Generate query embedding if not provided
+            if query_embedding is None:
+                # Check cache first
+                if redis_available:
+                    cached_embedding = await redis_service.get_embedding(query)
+                    if cached_embedding:
+                        query_embedding = cached_embedding
+                    else:
+                        # Generate new embedding
+                        query_embedding = await vertex_ai_service.generate_embedding(
+                            query, task_type="RETRIEVAL_QUERY"
+                        )
+                        # Cache it
+                        await redis_service.set_embedding(query, query_embedding)
+                else:
+                    # Generate new embedding without caching
+                    query_embedding = await vertex_ai_service.generate_embedding(
+                        query, task_type="RETRIEVAL_QUERY"
+                    )
 
-        # Perform hybrid search on clinical trials index
-        results = await es_service.hybrid_search(
-            index_name=es_service.indices["trials"],
-            query_text=query,
-            query_embedding=query_embedding,
-            filters=filters,
-            size=max_results,
-            keyword_weight=0.4,  # Higher keyword weight for clinical trials
-            semantic_weight=0.6,
-        )
+            # Perform hybrid search on clinical trials index
+            results = await es_service.hybrid_search(
+                index_name=es_service.indices["trials"],
+                query_text=query,
+                query_embedding=query_embedding,
+                filters=filters,
+                size=max_results,
+                keyword_weight=0.4,  # Higher keyword weight for clinical trials
+                semantic_weight=0.6,
+            )
 
         # Convert to SearchResult format
         search_results = []
