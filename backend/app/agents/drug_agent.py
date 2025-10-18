@@ -11,7 +11,23 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 
-async def execute_drug_agent(
+def _classify_intent(query: str) -> Dict[str, bool]:
+    """Lightweight intent classification for drug queries.
+
+    Detects whether the user is asking about side effects/safety and
+    whether geriatrics/older adults are mentioned.
+    """
+    q = query.lower()
+    side_effects = any(k in q for k in [
+        "side effect", "adverse", "reaction", "safety", "warning", "precaution"
+    ])
+    geriatrics = any(k in q for k in [
+        "elder", "older", "geriatr", "65", "senior"
+    ])
+    return {"side_effects": side_effects, "geriatrics": geriatrics}
+
+
+a​sync def execute_drug_agent(
     query: str,
     query_embedding: Optional[List[float]] = None,
     filters: Optional[Dict[str, Any]] = None,
@@ -59,24 +75,35 @@ async def execute_drug_agent(
             # Generate query embedding if not provided. If embedding generation fails,
             # use mock data rather than failing the entire agent.
             force_mock = False
+
+            # Expand the query for better recall based on detected intent (BM25 + vectors)
+            intent = _classify_intent(query)
+            expansions: List[str] = []
+            if intent.get("side_effects"):
+                expansions.append("(adverse reactions OR side effects OR safety OR warnings)")
+            # If geriatrics detected, explicitly bias toward age-related text
+            if intent.get("geriatrics"):
+                expansions.append("(elderly OR older adults OR geriatric OR 65 years)")
+            expanded_query_text = query if not expansions else f"{query} {' '.join(expansions)}"
+
             if query_embedding is None:
                 try:
-                    # Check cache first
+                    # Check cache first (cache keyed by the original user query)
                     if redis_available:
                         cached_embedding = await redis_service.get_embedding(query)
                         if cached_embedding:
                             query_embedding = cached_embedding
                         else:
-                            # Generate new embedding
+                            # Generate new embedding using expanded text to align semantics
                             query_embedding = await vertex_ai_service.generate_embedding(
-                                query, task_type="RETRIEVAL_QUERY"
+                                expanded_query_text, task_type="RETRIEVAL_QUERY"
                             )
-                            # Cache it
+                            # Cache it under the original query for reuse
                             await redis_service.set_embedding(query, query_embedding)
                     else:
                         # Generate new embedding without caching
                         query_embedding = await vertex_ai_service.generate_embedding(
-                            query, task_type="RETRIEVAL_QUERY"
+                            expanded_query_text, task_type="RETRIEVAL_QUERY"
                         )
                 except Exception as e:
                     logger.warning(f"Embedding generation failed, using mock drug data: {e}")
@@ -92,7 +119,7 @@ async def execute_drug_agent(
                 try:
                     results = await es_service.hybrid_search(
                         index_name=es_service.indices["drugs"],
-                        query_text=query,
+                        query_text=expanded_query_text,
                         query_embedding=query_embedding,
                         filters=filters,
                         size=max_results,

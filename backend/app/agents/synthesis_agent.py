@@ -342,6 +342,62 @@ async def synthesize_results(
         research_results, clinical_results, drug_results
     )
 
+    # Early relevance guardrail: if user asks for adverse effects (and optionally geriatrics)
+    # but retrieved evidence does not contain clear safety content, return a helpful
+    # "insufficient direct evidence" message instead of a generic answer.
+    def _intent(q: str) -> dict:
+        ql = q.lower()
+        return {
+            "side_effects": any(k in ql for k in ["side effect", "adverse", "reaction", "safety", "warning", "precaution"]),
+            "geriatrics": any(k in ql for k in ["elder", "older", "geriatr", "65", "senior"]),
+        }
+
+    user_intent = _intent(query)
+
+    def _coverage() -> int:
+        tokens = ["adverse", "side effect", "warning", "precaution", "geriat", "elder", "older", "65"]
+        text_chunks: List[str] = []
+        for r in (drug_results or [])[:5]:
+            text_chunks.append(r.get("adverse_reactions", ""))
+            text_chunks.append(r.get("warnings", ""))
+            text_chunks.append(r.get("indications", ""))
+        for r in (research_results or [])[:3]:
+            text_chunks.append(r.get("abstract", ""))
+        aggregate = " \n".join([t for t in text_chunks if t])[:4000]
+        score = sum(1 for t in tokens if t in aggregate.lower())
+        return score
+
+    if user_intent.get("side_effects") and _coverage() < 2:
+        # Build a structured, honest response using whatever we have
+        general_adverse = []
+        for r in (drug_results or [])[:3]:
+            if r.get("adverse_reactions"):
+                general_adverse.append(r.get("adverse_reactions")[:200])
+        general_text = " ".join(general_adverse)[:400]
+        tips = (
+            "I couldn’t find drug label sections that directly discuss side effects in older adults for this query. "
+            "Here’s what I can provide based on available safety text, and how you can refine the search:"
+        )
+        suggestion_lines = [
+            "Use terms like ‘geriatric use’, ‘older adults’, or ‘65 years’ with the drug name",
+            "Ask specifically for ‘adverse reactions’ or ‘warnings’",
+            "Include a condition or context (e.g., renal impairment) if relevant",
+        ]
+        advisory = (
+            f"{tips}\n\n"
+            + (f"General adverse reaction notes (not specific to older adults): {general_text}\n\n" if general_text else "")
+            + "Suggestions to refine: \n- " + "\n- ".join(suggestion_lines)
+        )
+        citations = extract_citations(research_results, clinical_results, drug_results)
+        return SynthesisOutput(
+            final_response=advisory + "\n\n⚕ Medical Disclaimer: Educational only; not medical advice.",
+            citations=citations,
+            confidence_score=max(confidence_score - 0.2, 0.0),
+            confidence_band="Low",
+            key_findings=[],
+            conflicts_detected=False,
+        )
+
     # Calculate recency score
     all_results = research_results + clinical_results + drug_results
     recency_score = calculate_recency_score(all_results)

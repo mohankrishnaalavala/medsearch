@@ -225,11 +225,27 @@ class ElasticsearchService:
                     }
                 })
 
-        # Build BM25 query
+        # Build BM25 query with fields tailored per index
+        bm25_fields = ["title^2", "abstract", "brief_summary", "detailed_description"]
+        try:
+            # If searching the drugs index, use drug-specific fields
+            if index_name == self.indices["drugs"]:
+                bm25_fields = [
+                    "drug_name^3",
+                    "generic_name^3",
+                    "brand_names^2",
+                    "indications^2",
+                    "warnings^4",
+                    "adverse_reactions^4",
+                ]
+        except Exception:
+            # Fallback to default fields if indices not initialized yet
+            bm25_fields = ["title^2", "abstract", "brief_summary", "detailed_description"]
+
         bm25_query = {
             "multi_match": {
                 "query": query_text,
-                "fields": ["title^2", "abstract", "brief_summary", "detailed_description"],
+                "fields": bm25_fields,
                 "type": "best_fields",
             }
         }
