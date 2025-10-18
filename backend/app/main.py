@@ -64,8 +64,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.info("All services initialized successfully")
 
     except Exception as e:
-        logger.error(f"Failed to initialize critical services: {e}")
-        raise
+        # Do not abort startup; continue in degraded mode
+        logger.error(f"Failed to initialize services: {e}. Continuing in degraded mode.")
 
     yield
 
