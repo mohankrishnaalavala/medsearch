@@ -146,7 +146,7 @@ Enhancements enabled during the hackathon (leveraging Elastic + Google Cloud):
 1. Open the live app: https://medsearch.mohankrishna.site/
 2. Enter a query (examples):
    - "What are the latest treatments for Type 2 diabetes in elderly patients?"
-   - "What are the current treatment options for Type 2 diabetes in patients over 65?"
+   - "what is Dapagliflozin in Heart Failure with Preserved Ejection Fraction (DELIVER)?"
    - "metformin side effects in elders?"
 3. Observe streaming updates (research → clinical → drug → synthesis) in a few seconds.
 4. Verify the final answer includes citations; expand them to view titles, journal/phase/status, and dates.
