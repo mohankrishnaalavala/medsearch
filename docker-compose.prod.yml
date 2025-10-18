@@ -67,7 +67,7 @@ services:
     cpus: 1.0
     depends_on:
       elasticsearch:
-        condition: service_healthy
+        condition: service_started
       redis:
         condition: service_healthy
     volumes:
