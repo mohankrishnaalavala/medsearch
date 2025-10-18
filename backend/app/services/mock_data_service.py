@@ -79,6 +79,7 @@ class MockDataService:
                 "mesh_terms": ["Rhinitis, Allergic, Seasonal", "Pollen", "Desensitization, Immunologic"],
                 "keywords": ["pollen", "allergic rhinitis", "cetirizine", "immunotherapy"]
             },
+                {
                 "_id": "pmid_38123460",
                 "_score": 0.82,
                 "pmid": "38123460",
