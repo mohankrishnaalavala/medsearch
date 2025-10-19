@@ -208,7 +208,7 @@ How these two platforms directly helped this project ship fast with quality:
   </tr>
   <tr>
     <td><img src="screenshots/query3.png" alt="Query example 3: drug safety response" width="480"/></td>
-    <td></td>
+    <td><img src="screenshots/compare.png" alt="compare research articles" width="480"/></td>
   </tr>
 </table>
 
