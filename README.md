@@ -141,7 +141,7 @@ Enhancements enabled during the hackathon (leveraging Elastic + Google Cloud):
 - WebSocket over HTTPS stability: Nginx configuration ensures reliable streaming from VM to browser
 - UX improvements: persistent medical disclaimer, better settings scrolling, and clearer progress signals while results stream
 
-## 🧑‍⚖️ How Judges Can Test
+## 🧑‍⚖️ QuickTest
 
 1. Open the live app: https://medsearch.mohankrishna.site/
 2. Enter a query (examples):
