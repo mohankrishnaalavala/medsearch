@@ -78,15 +78,51 @@ MedSearch AI transforms medical research through intelligent multi-agent orchest
 
 ---
 
+
+## � Elastic + Google Cloud
+
+How these two platforms directly helped this project ship fast with quality:
+
+- Elasticsearch
+  - Hybrid retrieval (BM25 + vector) delivered strong precision and semantic recall for medical content
+  - Per-source indices (PubMed, ClinicalTrials, Drugs) enabled specialized scoring and filters (dates, phases, study types)
+  - Simple mappings and stable APIs let us iterate quickly from prototype to production
+  - Enabled future growth: same query model scales from local dev to larger clusters without code changes
+- Google Cloud (Vertex AI + Compute Engine)
+  - Vertex AI gemini-embedding-001 powered our semantic search vectors with low latency and great quality
+  - Gemini Flash enabled fast synthesis and utility prompts (routing, summarization), keeping responses concise and cited
+  - Service accounts + IAM kept secrets and access scoped properly without custom infra
+  - Compute Engine VM hosted our stack reliably; Nginx terminated TLS and routed REST + WebSocket securely
+
+Enhancements enabled during the hackathon (leveraging Elastic + Google Cloud):
+- Resilient retrieval: if Elasticsearch or embeddings fail, agents fall back to curated mock data so users still receive cited answers
+- Degraded startup mode: the API continues to run even if ES/Redis are unavailable, recovering automatically when they return
+- Redis embedding cache: reduces latency and Vertex AI calls, improving speed and cost-efficiency
+- WebSocket over HTTPS stability: Nginx configuration ensures reliable streaming from VM to browser
+- UX improvements: persistent medical disclaimer, better settings scrolling, and clearer progress signals while results stream
+
+## 🧑‍⚖️ QuickTest
+
+1. Open the live app: https://medsearch.mohankrishna.site/
+2. Enter a query (examples):
+   - "What are the latest treatments for Type 2 diabetes in elderly patients?"
+   - "what is Dapagliflozin in Heart Failure with Preserved Ejection Fraction (DELIVER)?"
+   - "metformin side effects in elders?"
+3. Observe streaming updates (research → clinical → drug → synthesis) in a few seconds.
+4. Verify the final answer includes citations; expand them to view titles, journal/phase/status, and dates.
+5. Ask a follow-up question to see conversation context retention.
+6. Edge case (limited evidence): try a very narrow query; you should still receive partial, honest output with clear limitations.
+7. Reliability: even if Elasticsearch is temporarily unavailable, the system returns curated mock results so you’ll still see synthesized answers and citations.
+
 ## 🏗️ Architecture
 
 ### Tech Stack
 
 **Backend:**
 - Python 3.11+ with FastAPI
-- LangGraph 0.6+ & LangChain 0.3+ for multi-agent orchestration
+- LangGraph 0.2.x & LangChain 0.3.x for multi-agent orchestration
 - Elasticsearch 8.x for hybrid search
-- Google Vertex AI (Gemini 2.5) for embeddings and synthesis
+- Google Vertex AI (gemini-embedding-001 for embeddings; gemini-2.5-flash/pro for synthesis)
 - Redis for caching
 - SQLite for agent state persistence
 
@@ -98,7 +134,7 @@ MedSearch AI transforms medical research through intelligent multi-agent orchest
 
 **Infrastructure:**
 - Google Compute Engine e2-standard-2 VM (8GB RAM, 2 vCPU)
-- Docker Compose orchestration
+- Containerized services on GCE VM; Compose manifests managed on the VM (not currently in repo)
 - Nginx reverse proxy with HTTPS
 - GitHub Actions for CI/CD
 
@@ -119,44 +155,22 @@ MedSearch AI transforms medical research through intelligent multi-agent orchest
 
 ---
 
-## � Elastic + Google Cloud
-
-How these two platforms directly helped this project ship fast with quality:
-
-- Elasticsearch
-  - Hybrid retrieval (BM25 + vector) delivered strong precision and semantic recall for medical content
-  - Per-source indices (PubMed, ClinicalTrials, Drugs) enabled specialized scoring and filters (dates, phases, study types)
-  - Simple mappings and stable APIs let us iterate quickly from prototype to production
-  - Enabled future growth: same query model scales from local dev to larger clusters without code changes
-- Google Cloud (Vertex AI + Compute Engine)
-  - Vertex AI text-embedding-004 powered our semantic search vectors with low latency and great quality
-  - Gemini Flash enabled fast synthesis and utility prompts (routing, summarization), keeping responses concise and cited
-  - Service accounts + IAM kept secrets and access scoped properly without custom infra
-  - Compute Engine VM hosted our stack reliably; Nginx terminated TLS and routed REST + WebSocket securely
-
-Enhancements enabled during the hackathon (leveraging Elastic + Google Cloud):
-- Resilient retrieval: if Elasticsearch or embeddings fail, agents fall back to curated mock data so users still receive cited answers
-- Degraded startup mode: the API continues to run even if ES/Redis are unavailable, recovering automatically when they return
-- Redis embedding cache: reduces latency and Vertex AI calls, improving speed and cost-efficiency
-- WebSocket over HTTPS stability: Nginx configuration ensures reliable streaming from VM to browser
-- UX improvements: persistent medical disclaimer, better settings scrolling, and clearer progress signals while results stream
-
-## 🧑‍⚖️ How Judges Can Test
-
-1. Open the live app: https://medsearch.mohankrishna.site/
-2. Enter a query (examples):
-   - "What are the latest treatments for Type 2 diabetes in elderly patients?"
-   - "what is Dapagliflozin in Heart Failure with Preserved Ejection Fraction (DELIVER)?"
-   - "metformin side effects in elders?"
-3. Observe streaming updates (research → clinical → drug → synthesis) in a few seconds.
-4. Verify the final answer includes citations; expand them to view titles, journal/phase/status, and dates.
-5. Ask a follow-up question to see conversation context retention.
-6. Edge case (limited evidence): try a very narrow query; you should still receive partial, honest output with clear limitations.
-7. Reliability: even if Elasticsearch is temporarily unavailable, the system returns curated mock results so you’ll still see synthesized answers and citations.
-
 ## 📸 Screenshots
 
-(You can add screenshots here to illustrate the end-to-end flow.)
+<table>
+  <tr>
+    <td><img src="screenshots/login.png" alt="Login screen" width="480"/></td>
+    <td><img src="screenshots/dashboard.png" alt="Dashboard overview" width="480"/></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/query1.png" alt="Query example 1: search and streaming" width="480"/></td>
+    <td><img src="screenshots/query2.png" alt="Query example 2: citations and details" width="480"/></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/query3.png" alt="Query example 3: drug safety response" width="480"/></td>
+    <td></td>
+  </tr>
+</table>
 
 ---
 

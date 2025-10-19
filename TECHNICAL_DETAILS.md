@@ -7,8 +7,8 @@ This document provides a deeper technical overview of MedSearch AI, focusing on 
 - Backend: FastAPI (Python 3.11), LangGraph-based multi-agent workflow
 - Search: Elasticsearch 8.x hybrid (BM25 + vector)
 - AI: Google Cloud Vertex AI
-  - Embeddings: text-embedding-004
-  - LLM: Gemini (Flash) for synthesis and utility prompts
+  - Embeddings: gemini-embedding-001
+  - LLM: Gemini 2.5 Flash (with escalation to Gemini 2.5 Pro) for synthesis and utility prompts
 - Cache: Redis
 - State: SQLite (agent workflow state)
 - Reverse Proxy: Nginx (HTTPS)
@@ -47,7 +47,7 @@ Querying
 - Optional reranking via LLM when enabled
 
 ## Embeddings & Caching (Vertex AI + Redis)
-- Generate query embeddings with text-embedding-004
+- Generate query embeddings with gemini-embedding-001
 - Cache recent embeddings in Redis to reduce latency and cost
 - Fallback to cache on transient AI errors
 
@@ -83,6 +83,8 @@ Querying
 - Configurable through `.env` files (backend/frontend)
 - VM: Google Compute Engine (e2-standard-2)
 - Observability: container logs via `docker compose logs`
+
+- Note: Compose manifests are currently managed on the VM and are not included in this repository; for local development, run services directly without Compose.
 
 ## Performance Considerations
 - Embedding caching with Redis

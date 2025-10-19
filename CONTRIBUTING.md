@@ -12,7 +12,10 @@ Thank you for your interest in contributing! This project was built for the AI A
 - Backend: Python 3.11+, FastAPI
 - Frontend: Next.js 15, TypeScript
 - Services: Elasticsearch 8.x, Redis
-- Containerization: Docker Compose
+- Containerization: Docker; Compose manifests are managed on the VM and not included in the repo root
+
+
+Note: For local setup without Compose, see SETUP.md for step-by-step instructions.
 
 Recommended steps:
 1) Fork this repository and create a feature branch
