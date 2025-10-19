@@ -98,12 +98,44 @@ How these two platforms directly helped this project ship fast with quality:
   - Service accounts + IAM kept secrets and access scoped properly without custom infra
   - Compute Engine VM hosted our stack reliably; Nginx terminated TLS and routed REST + WebSocket securely
 
-Enhancements enabled during the hackathon (leveraging Elastic + Google Cloud):
-- Resilient retrieval: if Elasticsearch or embeddings fail, agents fall back to curated mock data so users still receive cited answers
-- Degraded startup mode: the API continues to run even if ES/Redis are unavailable, recovering automatically when they return
-- Redis embedding cache: reduces latency and Vertex AI calls, improving speed and cost-efficiency
-- WebSocket over HTTPS stability: Nginx configuration ensures reliable streaming from VM to browser
-- UX improvements: persistent medical disclaimer, better settings scrolling, and clearer progress signals while results stream
+### Key Technical Implementations (Elastic + Google Cloud)
+
+**1. Hybrid Search Architecture (Elasticsearch)**
+- **BM25 + Vector Fusion**: Combines keyword precision with semantic understanding using configurable weights (default: 70% semantic, 30% keyword)
+- **Per-Source Indices**: Separate indices for PubMed, ClinicalTrials.gov, and FDA drugs with specialized mappings and filters
+- **Dense Vector Fields**: 768-dimensional embeddings from Vertex AI gemini-embedding-001 for semantic search
+- **Advanced Filtering**: Date ranges, study phases, trial status, drug approval status with Elasticsearch query DSL
+
+**2. AI-Powered Reranking (Google Vertex AI)**
+- **Gemini-Based Scoring**: Optional LLM reranking using Gemini Flash to score top-k results (default: 10) for relevance (0.0-1.0)
+- **Per-Agent Application**: Applied independently to research, clinical trials, and drug results before synthesis
+- **Smart Fallback**: Gracefully falls back to original Elasticsearch ranking on errors
+- **Cost Control**: Configurable via `VERTEX_AI_RERANK_ENABLED` flag with adjustable top-k parameter
+
+**3. Application Performance Monitoring (Elastic APM)**
+- **Transaction Tracing**: Automatic instrumentation of FastAPI endpoints and multi-agent workflow
+- **Error Tracking**: Captures exceptions with full stack traces and context
+- **Performance Metrics**: Response times, throughput, and service dependencies visualization
+- **Configurable Sampling**: Adjustable transaction sample rate (default: 10%) for cost control
+- **Kibana Integration**: Real-time dashboards for monitoring application health
+
+**4. Intelligent Caching Strategy (Redis + Vertex AI)**
+- **Embedding Cache**: Stores recent query embeddings to reduce Vertex AI API calls and latency
+- **Search Result Cache**: Caches frequently asked queries with TTL for instant responses
+- **LRU Eviction**: Automatic memory management with allkeys-lru policy (512MB limit)
+- **Fallback Mechanism**: Continues operation even when cache is unavailable
+
+**5. Resilient Architecture**
+- **Graceful Degradation**: API continues running even if Elasticsearch/Redis are unavailable
+- **Mock Data Fallback**: Agents fall back to curated mock data ensuring users always receive cited answers
+- **Automatic Recovery**: Services reconnect automatically when dependencies return
+- **Health Checks**: All services include health checks with retries for reliability
+
+**6. Production-Ready Deployment (Google Compute Engine)**
+- **Resource Optimization**: Memory and CPU limits per container (ES: 2.5GB, API: 1.5GB, Frontend: 512MB)
+- **HTTPS/WSS**: Nginx reverse proxy with Let's Encrypt SSL for secure REST and WebSocket connections
+- **Container Orchestration**: Docker Compose with automatic restart policies and dependency management
+- **Monitoring Stack**: Elasticsearch + Kibana + APM Server for comprehensive observability
 
 ## 🧑‍⚖️ QuickTest
 

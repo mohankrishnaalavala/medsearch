@@ -55,10 +55,12 @@ services:
       apm-server -e
         -E apm-server.host=0.0.0.0:8200
         -E apm-server.rum.enabled=false
-        -E apm-server.secret_token=${APM_SECRET_TOKEN}
+        -E apm-server.secret_token=${APM_SECRET_TOKEN:-changeme}
         -E output.elasticsearch.hosts=["http://elasticsearch:9200"]
     mem_limit: 256m
     cpus: 0.3
+    ports:
+      - "127.0.0.1:8200:8200"
     networks:
       - medsearch-network
 
@@ -87,7 +89,6 @@ services:
     restart: unless-stopped
     env_file:
       - ./backend/.env
-
     environment:
       - ELASTICSEARCH_URL=http://elasticsearch:9200
       - REDIS_URL=redis://redis:6379
@@ -96,19 +97,20 @@ services:
       - GOOGLE_APPLICATION_CREDENTIALS=/app/medsearch-key.json
       - PUBMED_API_KEY=${PUBMED_API_KEY}
       - FDA_API_KEY=${FDA_API_KEY}
-
       - APP_ENV=development
       - APP_DEBUG=true
       - LOG_LEVEL=DEBUG
-
       # Elastic APM (optional)
-      - APM_ENABLED=${APM_ENABLED}
-      - APM_SERVER_URL=${APM_SERVER_URL}
+      - APM_ENABLED=${APM_ENABLED:-false}
+      - APM_SERVER_URL=${APM_SERVER_URL:-http://apm-server:8200}
       - APM_SECRET_TOKEN=${APM_SECRET_TOKEN}
       - APM_SERVICE_NAME=${APM_SERVICE_NAME:-medsearch-api}
-      - APM_ENVIRONMENT=${APM_ENVIRONMENT:-production}
+      - APM_ENVIRONMENT=${APM_ENVIRONMENT:-development}
       - APM_TRANSACTION_SAMPLE_RATE=${APM_TRANSACTION_SAMPLE_RATE:-0.1}
       - APM_CAPTURE_BODY=${APM_CAPTURE_BODY:-off}
+      # AI Reranking (optional)
+      - VERTEX_AI_RERANK_ENABLED=${VERTEX_AI_RERANK_ENABLED:-false}
+      - VERTEX_AI_RERANK_TOP_K=${VERTEX_AI_RERANK_TOP_K:-10}
     mem_limit: 1.5g
     cpus: 1.0
     depends_on:
