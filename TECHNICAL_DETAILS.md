@@ -9,10 +9,12 @@ This document provides a deeper technical overview of MedSearch AI, focusing on 
 - AI: Google Cloud Vertex AI
   - Embeddings: gemini-embedding-001
   - LLM: Gemini 2.5 Flash (with escalation to Gemini 2.5 Pro) for synthesis and utility prompts
-- Cache: Redis
+  - Optional AI-powered reranking using Gemini models
+- Cache: Redis (embedding cache + search result cache)
 - State: SQLite (agent workflow state)
-- Reverse Proxy: Nginx (HTTPS)
+- Reverse Proxy: Nginx (HTTPS with Let's Encrypt SSL)
 - Container Orchestration: Docker Compose
+- Monitoring: Elastic APM (optional, configurable)
 
 ## Data Flow Overview
 1. User enters a query in the frontend and creates a search session (REST POST)
@@ -40,16 +42,27 @@ Hybrid search combines:
 Indexing
 - Separate indices per source (pubmed, trials, drugs)
 - Stored fields (e.g., title, abstract, authors, journal, dates, ids)
+- Dense vector fields for semantic search
 
 Querying
 - Weighted combination (e.g., semantic_weight ~0.7, keyword_weight ~0.3)
-- Filters support (date ranges, study types, etc.)
-- Optional reranking via LLM when enabled
+- Configurable fusion strategy: weighted or RRF (Reciprocal Rank Fusion)
+- Filters support (date ranges, study types, phases, etc.)
+- Query synonym expansion (optional)
+
+Reranking (Optional)
+- AI-powered reranking using Gemini models
+- Configurable via `VERTEX_AI_RERANK_ENABLED` flag
+- Scores top-k results (default: 10) for relevance
+- Applied per-agent (research, clinical, drug) before synthesis
+- Fallback to original ranking on errors
 
 ## Embeddings & Caching (Vertex AI + Redis)
 - Generate query embeddings with gemini-embedding-001
 - Cache recent embeddings in Redis to reduce latency and cost
 - Fallback to cache on transient AI errors
+- Search result caching with TTL for frequently asked queries
+- Configurable cache expiration and max connections
 
 ## Resilience & Fallbacks
 - If Elasticsearch unavailable or returns 0 hits → return curated mock results
@@ -68,10 +81,28 @@ Querying
 - WS `/ws/{search_id}` → streams progress, intermediate and final results
 - GET `/health` → healthcheck
 
+## Monitoring & Observability (Elastic APM)
+Elastic APM provides comprehensive application performance monitoring:
+
+Configuration (Optional)
+- Enable via `APM_ENABLED=true` environment variable
+- Configure APM server URL, secret token, and service name
+- Adjustable transaction sample rate (default: 0.1 or 10%)
+- Configurable body capture: off/errors/transactions/all
+
+Features
+- Automatic instrumentation of FastAPI endpoints
+- Transaction tracing across multi-agent workflow
+- Error tracking with stack traces
+- Performance metrics (response times, throughput)
+- Service dependencies visualization
+- Custom transaction sampling for cost control
+
 ## Error Handling
 - Granular try/except around external calls (ES, Redis, Vertex AI)
 - Logged with context; degraded-mode messages on startup
 - Synthesis fallback assembles a simple, citation-backed response even on model failure
+- APM error tracking captures exceptions with full context
 
 ## Security & Privacy Notes
 - No PHI in demo; rely on public datasets / mock data
@@ -81,15 +112,27 @@ Querying
 ## Deployment Notes
 - Docker Compose for API, frontend, nginx, ES, Redis
 - Configurable through `.env` files (backend/frontend)
-- VM: Google Compute Engine (e2-standard-2)
-- Observability: container logs via `docker compose logs`
+- VM: Google Compute Engine (e2-standard-2, 8GB RAM, 2 vCPU)
+- SSL: Let's Encrypt certificates via Certbot
+- Observability:
+  - Container logs via `docker compose logs`
+  - Elastic APM for application performance monitoring (optional)
+  - Health checks for all services
 
-- Note: Compose manifests are currently managed on the VM and are not included in this repository; for local development, run services directly without Compose.
+Production Configuration
+- Memory limits per container (ES: 2.5GB, API: 1.5GB, Frontend: 512MB, Redis: 600MB, Nginx: 256MB)
+- CPU limits to prevent resource contention
+- Automatic restart policies (unless-stopped)
+- Health checks with retries for service reliability
 
 ## Performance Considerations
-- Embedding caching with Redis
+- Embedding caching with Redis (reduces Vertex AI API calls)
+- Search result caching for frequently asked queries
 - Minimal re-ranking for speed (optional LLM rerank toggle)
 - Partial data rendering to avoid blocking on any single source
+- Configurable search timeouts and result limits
+- Rate limiting to prevent abuse (10/min, 100/hour default)
+- Memory management with max concurrent request limits
 
 ## Known Limitations / Future Work
 - Expand datasets beyond curated subsets

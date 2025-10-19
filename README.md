@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"/></a>
+  <a href="https://www.apache.org/licenses/LICENSE-2.0"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License: Apache 2.0"/></a>
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python 3.11+"/></a>
   <a href="https://nextjs.org/"><img src="https://img.shields.io/badge/Next.js-15-black" alt="Next.js 15"/></a>
   <a href="https://ai-accelerate.devpost.com/"><img src="https://img.shields.io/badge/Hackathon-AI%20Accelerate-orange" alt="AI Accelerate Hackathon"/></a>
@@ -56,19 +56,23 @@ MedSearch AI transforms medical research through intelligent multi-agent orchest
 
 - 🎥 **Submission Video** (≤ 3 min): [Coming Soon]
 - 🌐 **Live App**: https://medsearch.mohankrishna.site/
+- 🎤 **Elevator Pitch**: [ELEVATOR_PITCH.md](ELEVATOR_PITCH.md)
 - 📘 **Technical Details**: [TECHNICAL_DETAILS.md](TECHNICAL_DETAILS.md)
 - 🤝 **Contributing Guide**: [CONTRIBUTING.md](CONTRIBUTING.md)
+- 🛠️ **Setup Guide**: [SETUP.md](SETUP.md)
 - 📄 **Medium Post**: [Coming Soon]
 - 📄 **LinkedIn Post**: [Coming Soon]
 
 ### Key Features
 
 - 🤖 **Multi-Agent Orchestration** - Specialized agents for Research, Clinical Trials, and Drug Information
-- 🔍 **Hybrid Search** - Combines semantic (vector) and keyword (BM25) search
+- 🔍 **Hybrid Search** - Combines semantic (vector) and keyword (BM25) search with optional AI-powered reranking
 - ⚡ **Real-time Streaming** - WebSocket-based streaming responses
 - 📚 **Citation-Backed** - Every claim includes verifiable sources
 - 🎯 **High Accuracy** - 95%+ citation accuracy with confidence scores
-- 🚀 **Fast** - Sub-3-second response time
+- 🚀 **Fast** - Sub-3-second response time with Redis caching
+- 📊 **Monitoring** - Elastic APM integration for performance tracking (optional)
+- 🔄 **Resilient** - Graceful degradation with fallback mechanisms
 
 ### Data Sources
 
@@ -77,9 +81,23 @@ MedSearch AI transforms medical research through intelligent multi-agent orchest
 - **FDA Drugs** - 200+ approved drugs with interaction data
 
 ---
+## 🧑‍⚖️ QuickTest
 
+1. Open the live app: https://medsearch.mohankrishna.site/
+2. Login with demo credentials:
+   - Email: demo@medsearch.ai
+   - Password: Demo@123
+3. Enter a query (examples):
+   - "What are the latest treatments for Type 2 diabetes in elderly patients?"
+   - "what is Dapagliflozin in Heart Failure with Preserved Ejection Fraction (DELIVER)?"
+   - "metformin side effects in elders?"
+4. Observe streaming updates (research → clinical → drug → synthesis) in a few seconds.
+5. Verify the final answer includes citations; expand them to view titles, journal/phase/status, and dates.
+6. Ask a follow-up question to see conversation context retention.
+7. Edge case (limited evidence): try a very narrow query; you should still receive partial, honest output with clear limitations.
+8. Reliability: even if Elasticsearch is temporarily unavailable, the system returns curated mock results so you’ll still see synthesized answers and citations.
 
-## � Elastic + Google Cloud
+## Elastic + Google Cloud
 
 How these two platforms directly helped this project ship fast with quality:
 
@@ -94,25 +112,45 @@ How these two platforms directly helped this project ship fast with quality:
   - Service accounts + IAM kept secrets and access scoped properly without custom infra
   - Compute Engine VM hosted our stack reliably; Nginx terminated TLS and routed REST + WebSocket securely
 
-Enhancements enabled during the hackathon (leveraging Elastic + Google Cloud):
-- Resilient retrieval: if Elasticsearch or embeddings fail, agents fall back to curated mock data so users still receive cited answers
-- Degraded startup mode: the API continues to run even if ES/Redis are unavailable, recovering automatically when they return
-- Redis embedding cache: reduces latency and Vertex AI calls, improving speed and cost-efficiency
-- WebSocket over HTTPS stability: Nginx configuration ensures reliable streaming from VM to browser
-- UX improvements: persistent medical disclaimer, better settings scrolling, and clearer progress signals while results stream
+### Key Technical Implementations (Elastic + Google Cloud)
 
-## 🧑‍⚖️ QuickTest
+**1. Hybrid Search Architecture (Elasticsearch)**
+- **BM25 + Vector Fusion**: Combines keyword precision with semantic understanding using configurable weights (default: 70% semantic, 30% keyword)
+- **Per-Source Indices**: Separate indices for PubMed, ClinicalTrials.gov, and FDA drugs with specialized mappings and filters
+- **Dense Vector Fields**: 768-dimensional embeddings from Vertex AI gemini-embedding-001 for semantic search
+- **Advanced Filtering**: Date ranges, study phases, trial status, drug approval status with Elasticsearch query DSL
 
-1. Open the live app: https://medsearch.mohankrishna.site/
-2. Enter a query (examples):
-   - "What are the latest treatments for Type 2 diabetes in elderly patients?"
-   - "what is Dapagliflozin in Heart Failure with Preserved Ejection Fraction (DELIVER)?"
-   - "metformin side effects in elders?"
-3. Observe streaming updates (research → clinical → drug → synthesis) in a few seconds.
-4. Verify the final answer includes citations; expand them to view titles, journal/phase/status, and dates.
-5. Ask a follow-up question to see conversation context retention.
-6. Edge case (limited evidence): try a very narrow query; you should still receive partial, honest output with clear limitations.
-7. Reliability: even if Elasticsearch is temporarily unavailable, the system returns curated mock results so you’ll still see synthesized answers and citations.
+**2. AI-Powered Reranking (Google Vertex AI)**
+- **Gemini-Based Scoring**: Optional LLM reranking using Gemini Flash to score top-k results (default: 10) for relevance (0.0-1.0)
+- **Per-Agent Application**: Applied independently to research, clinical trials, and drug results before synthesis
+- **Smart Fallback**: Gracefully falls back to original Elasticsearch ranking on errors
+- **Cost Control**: Configurable via `VERTEX_AI_RERANK_ENABLED` flag with adjustable top-k parameter
+
+**3. Application Performance Monitoring (Elastic APM)**
+- **Transaction Tracing**: Automatic instrumentation of FastAPI endpoints and multi-agent workflow
+- **Error Tracking**: Captures exceptions with full stack traces and context
+- **Performance Metrics**: Response times, throughput, and service dependencies visualization
+- **Configurable Sampling**: Adjustable transaction sample rate (default: 10%) for cost control
+- **Kibana Integration**: Real-time dashboards for monitoring application health
+
+**4. Intelligent Caching Strategy (Redis + Vertex AI)**
+- **Embedding Cache**: Stores recent query embeddings to reduce Vertex AI API calls and latency
+- **Search Result Cache**: Caches frequently asked queries with TTL for instant responses
+- **LRU Eviction**: Automatic memory management with allkeys-lru policy (512MB limit)
+- **Fallback Mechanism**: Continues operation even when cache is unavailable
+
+**5. Resilient Architecture**
+- **Graceful Degradation**: API continues running even if Elasticsearch/Redis are unavailable
+- **Mock Data Fallback**: Agents fall back to curated mock data ensuring users always receive cited answers
+- **Automatic Recovery**: Services reconnect automatically when dependencies return
+- **Health Checks**: All services include health checks with retries for reliability
+
+**6. Production-Ready Deployment (Google Compute Engine)**
+- **Resource Optimization**: Memory and CPU limits per container (ES: 2.5GB, API: 1.5GB, Frontend: 512MB)
+- **HTTPS/WSS**: Nginx reverse proxy with Let's Encrypt SSL for secure REST and WebSocket connections
+- **Container Orchestration**: Docker Compose with automatic restart policies and dependency management
+- **Monitoring Stack**: Elasticsearch + Kibana + APM Server for comprehensive observability
+
 
 ## 🏗️ Architecture
 
@@ -121,10 +159,11 @@ Enhancements enabled during the hackathon (leveraging Elastic + Google Cloud):
 **Backend:**
 - Python 3.11+ with FastAPI
 - LangGraph 0.2.x & LangChain 0.3.x for multi-agent orchestration
-- Elasticsearch 8.x for hybrid search
+- Elasticsearch 8.x for hybrid search (BM25 + vector)
 - Google Vertex AI (gemini-embedding-001 for embeddings; gemini-2.5-flash/pro for synthesis)
-- Redis for caching
+- Redis for embedding caching and search result caching
 - SQLite for agent state persistence
+- Elastic APM for application performance monitoring (optional)
 
 **Frontend:**
 - Next.js 15 (App Router) with TypeScript
@@ -134,9 +173,10 @@ Enhancements enabled during the hackathon (leveraging Elastic + Google Cloud):
 
 **Infrastructure:**
 - Google Compute Engine e2-standard-2 VM (8GB RAM, 2 vCPU)
-- Containerized services on GCE VM; Compose manifests managed on the VM (not currently in repo)
-- Nginx reverse proxy with HTTPS
+- Docker Compose for container orchestration
+- Nginx reverse proxy with HTTPS (Let's Encrypt SSL)
 - GitHub Actions for CI/CD
+- Certbot for automated SSL certificate management
 
 ### System Diagram
 
@@ -175,41 +215,9 @@ Enhancements enabled during the hackathon (leveraging Elastic + Google Cloud):
 ---
 
 
-
-
-
-
-
-## 🏆 Hackathon Submission
-
-**Event:** AI Accelerate: Unlocking New Frontiers
-**Challenge:** Elastic Challenge
-**Submission Date:** October 2025
-**Developer:** Mohan Krishna Alavala
-
-### Hackathon Requirements Compliance
-
-✅ **Google Cloud Integration** - Uses Vertex AI for embeddings (text-embedding-004) and LLM (Gemini 2.5 Flash)
-✅ **Elastic Integration** - Elasticsearch 8.15 for hybrid search (vector + BM25)
-✅ **Open Source** - MIT License, public repository
-✅ **Original Work** - Built from scratch during hackathon period
-✅ **Functional Demo** - Deployed and accessible with video demonstration
-✅ **Documentation** - Comprehensive README, setup instructions, and code comments
-
----
-
-## 🙏 Acknowledgments
-
-- **AI Accelerate Hackathon** - For providing the platform and challenge
-- **Google Cloud** - Vertex AI platform and Gemini models
-- **Elastic** - Elasticsearch hybrid search capabilities
-- **shadcn/ui** - Beautiful, accessible UI components
-- **PubMed, ClinicalTrials.gov, FDA** - Public medical data sources
-- **Open Source Community** - For the amazing tools and libraries
-
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
 ### Third-Party Licenses & Attributions
 

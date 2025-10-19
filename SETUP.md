@@ -205,6 +205,76 @@ See [internal_docs/vm-setup.md](../internal_docs/vm-setup.md) for detailed manua
 
 ---
 
+## Optional Features Configuration
+
+### Elastic APM (Application Performance Monitoring)
+
+Enable Elastic APM for comprehensive application monitoring:
+
+1. **Setup Elastic APM Server**
+   - Use Elastic Cloud or self-hosted APM server
+   - Get APM server URL and secret token
+
+2. **Configure Backend**
+   Edit `backend/.env`:
+   ```bash
+   APM_ENABLED=true
+   APM_SERVER_URL=https://your-apm-server:8200
+   APM_SECRET_TOKEN=your-secret-token
+   APM_SERVICE_NAME=medsearch-api
+   APM_ENVIRONMENT=production
+   APM_TRANSACTION_SAMPLE_RATE=0.1  # 10% sampling
+   APM_CAPTURE_BODY=errors  # off|errors|transactions|all
+   ```
+
+3. **Benefits**
+   - Transaction tracing across multi-agent workflow
+   - Error tracking with stack traces
+   - Performance metrics (response times, throughput)
+   - Service dependencies visualization
+
+### AI-Powered Reranking
+
+Enable Gemini-based reranking for enhanced search relevance:
+
+1. **Configure Backend**
+   Edit `backend/.env`:
+   ```bash
+   VERTEX_AI_RERANK_ENABLED=true
+   VERTEX_AI_RERANK_TOP_K=10  # Number of results to rerank
+   ```
+
+2. **How It Works**
+   - Uses Gemini models to score search results for relevance
+   - Applied per-agent (research, clinical, drug) before synthesis
+   - Fallback to original ranking on errors
+   - Configurable top-k to control cost
+
+3. **Trade-offs**
+   - **Pros**: Improved relevance, better result ordering
+   - **Cons**: Slightly higher latency, additional Vertex AI costs
+   - **Recommendation**: Enable for production, disable for development
+
+### Search Configuration Options
+
+Advanced search tuning in `backend/.env`:
+
+```bash
+# Fusion Strategy
+HYBRID_FUSION_STRATEGY=weighted  # weighted | rrf
+RRF_K=60  # Reciprocal Rank Fusion parameter
+
+# Query Enhancement
+QUERY_SYNONYMS_ENABLED=true  # Enable medical synonym expansion
+LOG_SEARCH_METRICS=true  # Log search performance metrics
+
+# Performance Tuning
+SEARCH_TIMEOUT_SECONDS=30
+MAX_SEARCH_RESULTS=20
+```
+
+---
+
 ## Troubleshooting
 
 ### Docker Issues
@@ -304,24 +374,6 @@ gcloud compute ssh medsearch-vm --zone=us-central1-a
 cd ~/medsearch
 docker-compose -f docker-compose.prod.yml logs
 ```
-
----
-
-## Next Steps
-
-After successful setup:
-
-1. **Run tests** to verify everything works:
-   ```bash
-   ./scripts/test-all.sh
-   ```
-
-2. **Proceed to Agent 2** for backend implementation:
-   - See `internal_docs/agent_prompts/agent-2-backend.md`
-
-3. **Review documentation**:
-   - [Product Requirements](../internal_docs/medsearch-prd.md)
-   - [Technical Specification](../internal_docs/medsearch-technical-spec.md)
 
 ---
 
