@@ -60,8 +60,7 @@ MedSearch AI transforms medical research through intelligent multi-agent orchest
 - 📘 **Technical Details**: [TECHNICAL_DETAILS.md](TECHNICAL_DETAILS.md)
 - 🤝 **Contributing Guide**: [CONTRIBUTING.md](CONTRIBUTING.md)
 - 🛠️ **Setup Guide**: [SETUP.md](SETUP.md)
-- 📄 **Medium Post**: [Coming Soon]
-- 📄 **LinkedIn Post**: [Coming Soon]
+
 
 ### Key Features
 
