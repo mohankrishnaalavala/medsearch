@@ -81,7 +81,21 @@ MedSearch AI transforms medical research through intelligent multi-agent orchest
 - **FDA Drugs** - 200+ approved drugs with interaction data
 
 ---
+## 🧑‍⚖️ QuickTest
 
+1. Open the live app: https://medsearch.mohankrishna.site/
+2. Login with demo credentials:
+   - Email: demo@medsearch.ai
+   - Password: Demo@123
+3. Enter a query (examples):
+   - "What are the latest treatments for Type 2 diabetes in elderly patients?"
+   - "what is Dapagliflozin in Heart Failure with Preserved Ejection Fraction (DELIVER)?"
+   - "metformin side effects in elders?"
+4. Observe streaming updates (research → clinical → drug → synthesis) in a few seconds.
+5. Verify the final answer includes citations; expand them to view titles, journal/phase/status, and dates.
+6. Ask a follow-up question to see conversation context retention.
+7. Edge case (limited evidence): try a very narrow query; you should still receive partial, honest output with clear limitations.
+8. Reliability: even if Elasticsearch is temporarily unavailable, the system returns curated mock results so you’ll still see synthesized answers and citations.
 
 ## Elastic + Google Cloud
 
@@ -137,21 +151,6 @@ How these two platforms directly helped this project ship fast with quality:
 - **Container Orchestration**: Docker Compose with automatic restart policies and dependency management
 - **Monitoring Stack**: Elasticsearch + Kibana + APM Server for comprehensive observability
 
-## 🧑‍⚖️ QuickTest
-
-1. Open the live app: https://medsearch.mohankrishna.site/
-2. Login with demo credentials:
-   - Email: demo@medsearch.ai
-   - Password: Demo@123
-3. Enter a query (examples):
-   - "What are the latest treatments for Type 2 diabetes in elderly patients?"
-   - "what is Dapagliflozin in Heart Failure with Preserved Ejection Fraction (DELIVER)?"
-   - "metformin side effects in elders?"
-4. Observe streaming updates (research → clinical → drug → synthesis) in a few seconds.
-5. Verify the final answer includes citations; expand them to view titles, journal/phase/status, and dates.
-6. Ask a follow-up question to see conversation context retention.
-7. Edge case (limited evidence): try a very narrow query; you should still receive partial, honest output with clear limitations.
-8. Reliability: even if Elasticsearch is temporarily unavailable, the system returns curated mock results so you’ll still see synthesized answers and citations.
 
 ## 🏗️ Architecture
 
