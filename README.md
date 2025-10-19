@@ -78,46 +78,6 @@ MedSearch AI transforms medical research through intelligent multi-agent orchest
 
 ---
 
-## 🏗️ Architecture
-
-### Tech Stack
-
-**Backend:**
-- Python 3.11+ with FastAPI
-- LangGraph 0.6+ & LangChain 0.3+ for multi-agent orchestration
-- Elasticsearch 8.x for hybrid search
-- Google Vertex AI (Gemini 2.5) for embeddings and synthesis
-- Redis for caching
-- SQLite for agent state persistence
-
-**Frontend:**
-- Next.js 15 (App Router) with TypeScript
-- Tailwind CSS + shadcn/ui components
-- TanStack Query for state management
-- WebSocket for real-time streaming
-
-**Infrastructure:**
-- Google Compute Engine e2-standard-2 VM (8GB RAM, 2 vCPU)
-- Docker Compose orchestration
-- Nginx reverse proxy with HTTPS
-- GitHub Actions for CI/CD
-
-### System Diagram
-
-```
-┌─────────────┐     ┌──────────────┐     ┌─────────────────┐
-│   Next.js   │────▶│   FastAPI    │────▶│  Elasticsearch  │
-│  Frontend   │     │   Backend    │     │  Hybrid Search  │
-└─────────────┘     └──────────────┘     └─────────────────┘
-                           │
-                           ├──────────────▶ Vertex AI (Gemini)
-                           │
-                           ├──────────────▶ Redis Cache
-                           │
-                           └──────────────▶ SQLite (State)
-```
-
----
 
 ## � Elastic + Google Cloud
 
@@ -129,7 +89,7 @@ How these two platforms directly helped this project ship fast with quality:
   - Simple mappings and stable APIs let us iterate quickly from prototype to production
   - Enabled future growth: same query model scales from local dev to larger clusters without code changes
 - Google Cloud (Vertex AI + Compute Engine)
-  - Vertex AI text-embedding-004 powered our semantic search vectors with low latency and great quality
+  - Vertex AI gemini-embedding-001 powered our semantic search vectors with low latency and great quality
   - Gemini Flash enabled fast synthesis and utility prompts (routing, summarization), keeping responses concise and cited
   - Service accounts + IAM kept secrets and access scoped properly without custom infra
   - Compute Engine VM hosted our stack reliably; Nginx terminated TLS and routed REST + WebSocket securely
@@ -154,9 +114,63 @@ Enhancements enabled during the hackathon (leveraging Elastic + Google Cloud):
 6. Edge case (limited evidence): try a very narrow query; you should still receive partial, honest output with clear limitations.
 7. Reliability: even if Elasticsearch is temporarily unavailable, the system returns curated mock results so you’ll still see synthesized answers and citations.
 
+## 🏗️ Architecture
+
+### Tech Stack
+
+**Backend:**
+- Python 3.11+ with FastAPI
+- LangGraph 0.2.x & LangChain 0.3.x for multi-agent orchestration
+- Elasticsearch 8.x for hybrid search
+- Google Vertex AI (gemini-embedding-001 for embeddings; gemini-2.5-flash/pro for synthesis)
+- Redis for caching
+- SQLite for agent state persistence
+
+**Frontend:**
+- Next.js 15 (App Router) with TypeScript
+- Tailwind CSS + shadcn/ui components
+- TanStack Query for state management
+- WebSocket for real-time streaming
+
+**Infrastructure:**
+- Google Compute Engine e2-standard-2 VM (8GB RAM, 2 vCPU)
+- Containerized services on GCE VM; Compose manifests managed on the VM (not currently in repo)
+- Nginx reverse proxy with HTTPS
+- GitHub Actions for CI/CD
+
+### System Diagram
+
+```
+┌─────────────┐     ┌──────────────┐     ┌─────────────────┐
+│   Next.js   │────▶│   FastAPI    │────▶│  Elasticsearch  │
+│  Frontend   │     │   Backend    │     │  Hybrid Search  │
+└─────────────┘     └──────────────┘     └─────────────────┘
+                           │
+                           ├──────────────▶ Vertex AI (Gemini)
+                           │
+                           ├──────────────▶ Redis Cache
+                           │
+                           └──────────────▶ SQLite (State)
+```
+
+---
+
 ## 📸 Screenshots
 
-(You can add screenshots here to illustrate the end-to-end flow.)
+<table>
+  <tr>
+    <td><img src="screenshots/login.png" alt="Login screen" width="480"/></td>
+    <td><img src="screenshots/dashboard.png" alt="Dashboard overview" width="480"/></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/query1.png" alt="Query example 1: search and streaming" width="480"/></td>
+    <td><img src="screenshots/query2.png" alt="Query example 2: citations and details" width="480"/></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/query3.png" alt="Query example 3: drug safety response" width="480"/></td>
+    <td></td>
+  </tr>
+</table>
 
 ---
 
