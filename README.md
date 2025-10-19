@@ -22,12 +22,6 @@
 
 MedSearch AI is an intelligent medical research assistant built for the **AI Accelerate Hackathon (Elastic Challenge)**. It leverages multi-agent orchestration to help healthcare professionals find, analyze, and synthesize medical research in seconds. The system combines Elasticsearch's hybrid search capabilities with Google Cloud's Vertex AI to deliver context-aware, citation-backed medical insights.
 
-### Elevator Pitch
-
-Healthcare professionals waste 15-20 hours per topic manually searching through 1.5 million annual medical publications. **MedSearch AI transforms 20 hours of research into 20 seconds of intelligent conversation.** Our multi-agent system orchestrates specialized AI agents that work in parallel to search PubMed, ClinicalTrials.gov, and FDA databases, delivering citation-backed answers with 95%+ accuracy in under 3 seconds. Built on Elasticsearch's hybrid search (BM25 + vector) and Google Vertex AI, we provide resilient, production-ready medical research synthesis that empowers better healthcare decisions, faster.
-
-📄 **Full Elevator Pitch**: [ELEVATOR_PITCH.md](ELEVATOR_PITCH.md)
-
 ---
 
 ## 🔍 Problem Statement
@@ -89,7 +83,7 @@ MedSearch AI transforms medical research through intelligent multi-agent orchest
 ---
 
 
-## � Elastic + Google Cloud
+## Elastic + Google Cloud
 
 How these two platforms directly helped this project ship fast with quality:
 

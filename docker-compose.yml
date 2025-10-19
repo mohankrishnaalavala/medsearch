@@ -1,0 +1,183 @@
+version: '3.8'
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.1
+    container_name: medsearch-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+      - xpack.security.enabled=false
+      - bootstrap.memory_lock=true
+    restart: unless-stopped
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    mem_limit: 1.5g
+    cpus: 1.0
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - medsearch-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: medsearch-redis
+    restart: unless-stopped
+
+    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru
+    mem_limit: 600m
+    cpus: 0.5
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - medsearch-network
+
+  apm-server:
+    image: docker.elastic.co/apm/apm-server:8.15.1
+    container_name: medsearch-apm
+    restart: unless-stopped
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    command: >
+      apm-server -e
+        -E apm-server.host=0.0.0.0:8200
+        -E apm-server.rum.enabled=false
+        -E apm-server.secret_token=${APM_SECRET_TOKEN}
+        -E output.elasticsearch.hosts=["http://elasticsearch:9200"]
+    mem_limit: 256m
+    cpus: 0.3
+    networks:
+      - medsearch-network
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.15.1
+    container_name: medsearch-kibana
+    restart: unless-stopped
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - SERVER_PUBLICBASEURL=http://localhost:5601
+    mem_limit: 512m
+    cpus: 0.5
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:5601:5601"
+    networks:
+      - medsearch-network
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: medsearch-api
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+
+    environment:
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - REDIS_URL=redis://redis:6379
+      - SQLITE_PATH=/app/data/medsearch.db
+      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/medsearch-key.json
+      - PUBMED_API_KEY=${PUBMED_API_KEY}
+      - FDA_API_KEY=${FDA_API_KEY}
+
+      - APP_ENV=development
+      - APP_DEBUG=true
+      - LOG_LEVEL=DEBUG
+
+      # Elastic APM (optional)
+      - APM_ENABLED=${APM_ENABLED}
+      - APM_SERVER_URL=${APM_SERVER_URL}
+      - APM_SECRET_TOKEN=${APM_SECRET_TOKEN}
+      - APM_SERVICE_NAME=${APM_SERVICE_NAME:-medsearch-api}
+      - APM_ENVIRONMENT=${APM_ENVIRONMENT:-production}
+      - APM_TRANSACTION_SAMPLE_RATE=${APM_TRANSACTION_SAMPLE_RATE:-0.1}
+      - APM_CAPTURE_BODY=${APM_CAPTURE_BODY:-off}
+    mem_limit: 1.5g
+    cpus: 1.0
+    depends_on:
+      elasticsearch:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - ./logs:/app/logs
+      - ./backend/data:/app/data
+      - ./medsearch-key.json:/app/medsearch-key.json:ro
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - medsearch-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: medsearch-frontend
+    restart: unless-stopped
+
+    mem_limit: 512m
+    cpus: 0.5
+    depends_on:
+      - api
+    networks:
+      - medsearch-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: medsearch-nginx
+    mem_limit: 128m
+    cpus: 0.25
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - certbot-www:/var/www/certbot
+      - letsencrypt:/etc/letsencrypt
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - frontend
+      - api
+    networks:
+      - medsearch-network
+    restart: unless-stopped
+
+  certbot:
+    image: certbot/certbot:latest
+    container_name: medsearch-certbot
+    volumes:
+      - certbot-www:/var/www/certbot
+      - letsencrypt:/etc/letsencrypt
+    entrypoint: /bin/sh
+    command: -c "sleep 3600"
+
+volumes:
+  es_data:
+    driver: local
+  redis_data:
+    driver: local
+  certbot-www:
+    driver: local
+  letsencrypt:
+    driver: local
+
+networks:
+  medsearch-network:
+    driver: bridge
+
