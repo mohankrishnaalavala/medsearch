@@ -56,7 +56,6 @@ MedSearch AI transforms medical research through intelligent multi-agent orchest
 
 - 🎥 **Submission Video** (≤ 3 min): [Coming Soon]
 - 🌐 **Live App**: https://medsearch.mohankrishna.site/
-- 🎤 **Elevator Pitch**: [ELEVATOR_PITCH.md](ELEVATOR_PITCH.md)
 - 📘 **Technical Details**: [TECHNICAL_DETAILS.md](TECHNICAL_DETAILS.md)
 - 🤝 **Contributing Guide**: [CONTRIBUTING.md](CONTRIBUTING.md)
 - 🛠️ **Setup Guide**: [SETUP.md](SETUP.md)
