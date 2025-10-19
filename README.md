@@ -54,11 +54,12 @@ MedSearch AI transforms medical research through intelligent multi-agent orchest
 
 ### Demo Links
 
-🎥 **Submission Video** (≤ 3 min): [Coming Soon]
-🌐 **Live Dashboard**: [Coming Soon]
-📘 **Technical Details**: [TECHNICAL.md](TECHNICAL.md)
-📄 **Medium Post**: [Coming Soon]
-📄 **LinkedIn Post**: [Coming Soon]
+- 🎥 **Submission Video** (≤ 3 min): [Coming Soon]
+- 🌐 **Live App**: https://medsearch.mohankrishna.site/
+- 📘 **Technical Details**: [TECHNICAL_DETAILS.md](TECHNICAL_DETAILS.md)
+- 🤝 **Contributing Guide**: [CONTRIBUTING.md](CONTRIBUTING.md)
+- 📄 **Medium Post**: [Coming Soon]
+- 📄 **LinkedIn Post**: [Coming Soon]
 
 ### Key Features
 
@@ -98,7 +99,7 @@ MedSearch AI transforms medical research through intelligent multi-agent orchest
 **Infrastructure:**
 - Google Compute Engine e2-standard-2 VM (8GB RAM, 2 vCPU)
 - Docker Compose orchestration
-- Cloudflare Tunnel for HTTPS
+- Nginx reverse proxy with HTTPS
 - GitHub Actions for CI/CD
 
 ### System Diagram
@@ -118,186 +119,79 @@ MedSearch AI transforms medical research through intelligent multi-agent orchest
 
 ---
 
-## 🚀 Quick Start
+## � Elastic + Google Cloud
 
-### Prerequisites
+How these two platforms directly helped this project ship fast with quality:
 
-- Docker and Docker Compose
-- Node.js 20+ (for local frontend development)
-- Python 3.11+ (for local backend development)
-- Google Cloud account with Vertex AI enabled
-- Service account key (`medsearch-key.json`)
+- Elasticsearch
+  - Hybrid retrieval (BM25 + vector) delivered strong precision and semantic recall for medical content
+  - Per-source indices (PubMed, ClinicalTrials, Drugs) enabled specialized scoring and filters (dates, phases, study types)
+  - Simple mappings and stable APIs let us iterate quickly from prototype to production
+  - Enabled future growth: same query model scales from local dev to larger clusters without code changes
+- Google Cloud (Vertex AI + Compute Engine)
+  - Vertex AI text-embedding-004 powered our semantic search vectors with low latency and great quality
+  - Gemini Flash enabled fast synthesis and utility prompts (routing, summarization), keeping responses concise and cited
+  - Service accounts + IAM kept secrets and access scoped properly without custom infra
+  - Compute Engine VM hosted our stack reliably; Nginx terminated TLS and routed REST + WebSocket securely
 
-### Local Development
+Enhancements enabled during the hackathon (leveraging Elastic + Google Cloud):
+- Resilient retrieval: if Elasticsearch or embeddings fail, agents fall back to curated mock data so users still receive cited answers
+- Degraded startup mode: the API continues to run even if ES/Redis are unavailable, recovering automatically when they return
+- Redis embedding cache: reduces latency and Vertex AI calls, improving speed and cost-efficiency
+- WebSocket over HTTPS stability: Nginx configuration ensures reliable streaming from VM to browser
+- UX improvements: persistent medical disclaimer, better settings scrolling, and clearer progress signals while results stream
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/mohankrishnaalavala/medsearch.git
-   cd medsearch
-   ```
+## 🧑‍⚖️ How Judges Can Test
 
-2. **Setup environment variables**
-   ```bash
-   # Backend
-   cp backend/.env.example backend/.env
-   # Update backend/.env with your configuration
+1. Open the live app: https://medsearch.mohankrishna.site/
+2. Enter a query (examples):
+   - "What are the latest treatments for Type 2 diabetes in elderly patients?"
+   - "what is Dapagliflozin in Heart Failure with Preserved Ejection Fraction (DELIVER)?"
+   - "metformin side effects in elders?"
+3. Observe streaming updates (research → clinical → drug → synthesis) in a few seconds.
+4. Verify the final answer includes citations; expand them to view titles, journal/phase/status, and dates.
+5. Ask a follow-up question to see conversation context retention.
+6. Edge case (limited evidence): try a very narrow query; you should still receive partial, honest output with clear limitations.
+7. Reliability: even if Elasticsearch is temporarily unavailable, the system returns curated mock results so you’ll still see synthesized answers and citations.
 
-   # Frontend
-   cp frontend/.env.example frontend/.env.local
-   ```
+## 📸 Screenshots
 
-3. **Place service account key**
-   ```bash
-   # Copy your medsearch-key.json to the backend directory
-   cp /path/to/medsearch-key.json backend/
-   ```
-
-4. **Start services with Docker Compose**
-   ```bash
-   docker-compose up -d
-   ```
-
-5. **Access the application**
-   - Frontend: http://localhost:3000
-   - API: http://localhost:8000
-   - API Docs: http://localhost:8000/docs
-   - Elasticsearch: http://localhost:9200
-
-### Development Without Docker
-
-**Backend:**
-```bash
-cd backend
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload
-```
-
-**Frontend:**
-```bash
-cd frontend
-npm install
-npm run dev
-```
+(You can add screenshots here to illustrate the end-to-end flow.)
 
 ---
 
-## 📦 Deployment
 
-### Deploy to Google Cloud VM
 
-1. **Provision VM**
-   ```bash
-   ./scripts/provision-vm.sh medsearch-ai us-central1-a
-   ```
 
-2. **Setup GitHub Secrets**
-   - `GCP_PROJECT_ID`: Your GCP project ID
-   - `GCP_SA_KEY`: Service account key JSON (base64 encoded)
 
-3. **Deploy via GitHub Actions**
-   ```bash
-   git push origin main
-   ```
 
-4. **Manual deployment**
-   See [internal_docs/vm-setup.md](internal_docs/vm-setup.md) for detailed instructions.
 
----
+## 🏆 Hackathon Submission
 
-## 🧪 Testing
+**Event:** AI Accelerate: Unlocking New Frontiers
+**Challenge:** Elastic Challenge
+**Submission Date:** October 2025
+**Developer:** Mohan Krishna Alavala
 
-### Backend Tests
-```bash
-cd backend
-pytest
-pytest --cov=app --cov-report=html
-```
+### Hackathon Requirements Compliance
 
-### Frontend Tests
-```bash
-cd frontend
-npm run test
-npm run test:coverage
-```
-
-### Type Checking
-```bash
-# Backend
-cd backend
-mypy app
-
-# Frontend
-cd frontend
-npm run type-check
-```
-
-### Linting
-```bash
-# Backend
-cd backend
-ruff check app
-
-# Frontend
-cd frontend
-npm run lint
-```
+✅ **Google Cloud Integration** - Uses Vertex AI for embeddings (text-embedding-004) and LLM (Gemini 2.5 Flash)
+✅ **Elastic Integration** - Elasticsearch 8.15 for hybrid search (vector + BM25)
+✅ **Open Source** - MIT License, public repository
+✅ **Original Work** - Built from scratch during hackathon period
+✅ **Functional Demo** - Deployed and accessible with video demonstration
+✅ **Documentation** - Comprehensive README, setup instructions, and code comments
 
 ---
 
-## 📚 Documentation
+## 🙏 Acknowledgments
 
-
----
-
-## 🛠️ Development Workflow
-
-### Project Structure
-```
-medsearch/
-├── backend/              # FastAPI backend
-│   ├── app/
-│   │   ├── api/         # API routes
-│   │   ├── agents/      # LangGraph agents
-│   │   ├── services/    # Business logic
-│   │   ├── models/      # Data models
-│   │   └── core/        # Configuration
-│   └── tests/           # Backend tests
-├── frontend/            # Next.js frontend
-│   ├── app/            # Next.js app router
-│   ├── components/     # React components
-│   ├── lib/            # Utilities and types
-│   └── hooks/          # Custom React hooks
-├── data-ingestion/     # ETL scripts
-├── scripts/            # Deployment scripts
-└── docs/               # Documentation
-```
-
-### Development Approach
-
-This project was developed iteratively with a focus on:
-
-1. **Infrastructure Setup** - Docker Compose orchestration, Google Cloud integration
-2. **Backend Development** - FastAPI REST API, WebSocket streaming, multi-agent workflow
-3. **Search Implementation** - Elasticsearch hybrid search (vector + BM25), embedding generation
-4. **Data Pipeline** - ETL scripts for PubMed, ClinicalTrials.gov, and FDA data
-5. **Frontend Development** - Next.js UI with real-time updates and citation management
-6. **Testing & Optimization** - End-to-end testing, performance tuning, deployment
-
----
-
-## 🤝 Contributing
-
-This is a hackathon submission project. If you'd like to contribute or build upon this work:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
----
+- **AI Accelerate Hackathon** - For providing the platform and challenge
+- **Google Cloud** - Vertex AI platform and Gemini models
+- **Elastic** - Elasticsearch hybrid search capabilities
+- **shadcn/ui** - Beautiful, accessible UI components
+- **PubMed, ClinicalTrials.gov, FDA** - Public medical data sources
+- **Open Source Community** - For the amazing tools and libraries
 
 ## 📄 License
 
@@ -333,32 +227,6 @@ This project uses the following open-source libraries and services:
 
 ---
 
-## 🏆 Hackathon Submission
-
-**Event:** AI Accelerate: Unlocking New Frontiers
-**Challenge:** Elastic Challenge
-**Submission Date:** October 2025
-**Developer:** Mohan Krishna Alavala
-
-### Hackathon Requirements Compliance
-
-✅ **Google Cloud Integration** - Uses Vertex AI for embeddings (text-embedding-004) and LLM (Gemini 2.5 Flash)
-✅ **Elastic Integration** - Elasticsearch 8.15 for hybrid search (vector + BM25)
-✅ **Open Source** - MIT License, public repository
-✅ **Original Work** - Built from scratch during hackathon period
-✅ **Functional Demo** - Deployed and accessible with video demonstration
-✅ **Documentation** - Comprehensive README, setup instructions, and code comments
-
----
-
-## 🙏 Acknowledgments
-
-- **AI Accelerate Hackathon** - For providing the platform and challenge
-- **Google Cloud** - Vertex AI platform and Gemini models
-- **Elastic** - Elasticsearch hybrid search capabilities
-- **shadcn/ui** - Beautiful, accessible UI components
-- **PubMed, ClinicalTrials.gov, FDA** - Public medical data sources
-- **Open Source Community** - For the amazing tools and libraries
 
 ---
 

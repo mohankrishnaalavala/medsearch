@@ -8,10 +8,12 @@ import { CitationCard } from './citation-card';
 import { CitationDrawer } from './citation-drawer';
 import { ConversationsSidebar } from './conversations-sidebar';
 import { CitationExport } from './citation-export';
+import { MessageSkeleton } from './message-skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, Loader2, Trash2, Paperclip, Mic, Plus } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { Send, Loader2, Trash2, Paperclip, Mic, Plus, RefreshCw } from 'lucide-react';
 import { createSearch } from '@/lib/api';
 import { createWebSocketClient, WebSocketClient } from '@/lib/websocket';
 import type { WebSocketMessage } from '@/lib/websocket';
@@ -69,6 +71,7 @@ const extractSources = (citations: Citation[]): string[] => {
 };
 
 export function ChatInterface() {
+  const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -78,6 +81,8 @@ export function ChatInterface() {
   const [isCitationOpen, setIsCitationOpen] = useState<boolean>(false);
   const [wsClient, setWsClient] = useState<WebSocketClient | null>(null);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [lastQuery, setLastQuery] = useState<string>('');
+  const [firstTokenTime, setFirstTokenTime] = useState<number | null>(null);
 
   const [currentStep, setCurrentStep] = useState<string | null>(null);
 
@@ -190,12 +195,29 @@ export function ChatInterface() {
     };
   }, [wsClient]);
 
+  const handleRetry = useCallback(() => {
+    if (lastQuery) {
+      setInput(lastQuery);
+      // Trigger submit after a short delay to ensure input is set
+      setTimeout(() => {
+        const form = document.querySelector('form');
+        if (form) {
+          form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+        }
+      }, 100);
+    }
+  }, [lastQuery]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!input.trim() || isLoading) {
       return;
     }
+
+    // Save query for retry
+    setLastQuery(input.trim());
+    setFirstTokenTime(Date.now());
 
     // Create new conversation if this is the first message
     if (!currentConversationId) {
@@ -320,6 +342,13 @@ export function ChatInterface() {
         // Mark progress complete
         setCurrentStep('complete');
         setIsLoading(false);
+
+        // Log first token time
+        if (firstTokenTime) {
+          const elapsed = Date.now() - firstTokenTime;
+          console.debug(`First token received in ${elapsed}ms`);
+        }
+
         client.disconnect();
       });
 
@@ -329,18 +358,40 @@ export function ChatInterface() {
         if (!isSearchErrorPayload(payload)) return;
         if (payload.search_id !== response.search_id) return; // ignore other sessions
         console.error('WebSocket error:', payload);
+
+        const errorMessage = payload.error || 'An error occurred during search';
+
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === response.search_id
               ? {
                   ...msg,
-                  content: `Error: ${payload.error || 'An error occurred during search'}`,
+                  content: `Error: ${errorMessage}`,
                   isStreaming: false,
                 }
               : msg
           )
         );
         setIsLoading(false);
+
+        // Show error toast with retry option
+        toast({
+          title: 'Search failed',
+          description: errorMessage,
+          variant: 'destructive',
+          action: (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRetry}
+              className="gap-1"
+            >
+              <RefreshCw className="h-3 w-3" />
+              Retry
+            </Button>
+          ),
+        });
+
         client.disconnect();
       });
 
@@ -348,16 +399,36 @@ export function ChatInterface() {
       await client.connect();
     } catch (error) {
       console.error('Error creating search:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now().toString(),
           role: 'assistant',
-          content: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          content: `Error: ${errorMessage}`,
           timestamp: new Date(),
         },
       ]);
       setIsLoading(false);
+
+      // Show error toast with retry option
+      toast({
+        title: 'Failed to start search',
+        description: errorMessage,
+        variant: 'destructive',
+        action: (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRetry}
+            className="gap-1"
+          >
+            <RefreshCw className="h-3 w-3" />
+            Retry
+          </Button>
+        ),
+      });
     }
   };
 
@@ -416,18 +487,23 @@ export function ChatInterface() {
         </div>
 
         {/* Messages */}
-        <ScrollArea className="flex-1 p-6" ref={scrollRef}>
+        <ScrollArea className="flex-1 p-4 md:p-6" ref={scrollRef}>
           {messages.length === 0 && !isLoading ? (
-            <div className="flex flex-col items-center justify-center h-full max-w-4xl mx-auto">
+            <div className="flex flex-col items-center justify-center h-full max-w-4xl mx-auto px-4">
               <div className="text-center space-y-4 mb-8">
-                <h2 className="text-3xl font-bold">Welcome to MedSearch AI</h2>
-                <p className="text-muted-foreground text-lg">
+                <h2 className="text-2xl md:text-3xl font-bold">Welcome to MedSearch AI</h2>
+                <p className="text-muted-foreground text-base md:text-lg">
                   Ask me anything about medical research, clinical trials, or drug information.
                 </p>
               </div>
             </div>
           ) : (
-            <div className="max-w-4xl mx-auto space-y-6">
+            <div
+              className="max-w-4xl mx-auto space-y-6"
+              role="log"
+              aria-live="polite"
+              aria-label="Conversation messages"
+            >
               {messages.map((message) => (
                 <MessageBubble
                   key={message.id}
@@ -436,22 +512,30 @@ export function ChatInterface() {
                 />
               ))}
 
-              {/* Loading state with agent status */}
+              {/* Loading state with skeleton UI and agent status */}
               {isLoading && (
-                <div className="flex gap-4">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted">
-                    <Loader2 className="h-5 w-5 text-foreground animate-spin" />
-                  </div>
-                  <div className="flex-1 space-y-3">
-                    <div className="rounded-2xl px-4 py-3 bg-card border border-border max-w-3xl">
-                      <div className="flex items-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                        <p className="text-sm text-muted-foreground">
-                          {currentStep || 'Analyzing your query...'}
-                        </p>
-                      </div>
+                <div
+                  className="space-y-4"
+                  role="status"
+                  aria-live="polite"
+                  aria-label="Loading search results"
+                >
+                  <MessageSkeleton />
+                  <div className="flex gap-4">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted">
+                      <Loader2 className="h-5 w-5 text-foreground animate-spin" aria-hidden="true" />
                     </div>
-                    {agents.length > 0 && <AgentStatus agents={agents} />}
+                    <div className="flex-1 space-y-3">
+                      <div className="rounded-2xl px-4 py-3 bg-card border border-border max-w-3xl">
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin text-primary" aria-hidden="true" />
+                          <p className="text-sm text-muted-foreground">
+                            {currentStep || 'Analyzing your query...'}
+                          </p>
+                        </div>
+                      </div>
+                      {agents.length > 0 && <AgentStatus agents={agents} />}
+                    </div>
                   </div>
                 </div>
               )}
@@ -460,7 +544,7 @@ export function ChatInterface() {
         </ScrollArea>
 
         {/* Input */}
-        <div className="border-t border-border bg-background p-6">
+        <div className="border-t border-border bg-background p-4 md:p-6">
           <form onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-4">
             <div className="relative">
               <Input
@@ -469,9 +553,13 @@ export function ChatInterface() {
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Ask about treatments, clinical trials, drug interactions..."
                 disabled={isLoading}
-                className="pr-28 h-12"
-                aria-label="Query input"
+                className="pr-28 h-10 md:h-12 text-sm md:text-base"
+                aria-label="Search query input"
+                aria-describedby="search-hint"
               />
+              <span id="search-hint" className="sr-only">
+                Enter your medical research question and press Enter or click Send
+              </span>
               <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
                 <Button
                   type="button"

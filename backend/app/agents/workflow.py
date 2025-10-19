@@ -242,12 +242,16 @@ class MedSearchWorkflow:
                 drug_results=state.get("drug_results", []),
                 use_escalation=self.config.use_escalation_model,
                 conversation_history=conversation_history,
+                filters=state.get("filters"),
             )
 
             return {
                 "final_response": synthesis.final_response,
                 "citations": synthesis.citations,
                 "confidence_score": synthesis.confidence_score,
+                "confidence_band": synthesis.confidence_band,
+                "conflicts_detected": synthesis.conflicts_detected,
+                "consensus_summary": synthesis.consensus_summary,
                 "current_step": "synthesis",
                 "progress": 100,
             }
