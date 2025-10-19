@@ -307,24 +307,6 @@ docker-compose -f docker-compose.prod.yml logs
 
 ---
 
-## Next Steps
-
-After successful setup:
-
-1. **Run tests** to verify everything works:
-   ```bash
-   ./scripts/test-all.sh
-   ```
-
-2. **Proceed to Agent 2** for backend implementation:
-   - See `internal_docs/agent_prompts/agent-2-backend.md`
-
-3. **Review documentation**:
-   - [Product Requirements](../internal_docs/medsearch-prd.md)
-   - [Technical Specification](../internal_docs/medsearch-technical-spec.md)
-
----
-
 ## Support
 
 For issues or questions:
