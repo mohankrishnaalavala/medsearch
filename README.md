@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"/></a>
+  <a href="https://www.apache.org/licenses/LICENSE-2.0"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License: Apache 2.0"/></a>
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python 3.11+"/></a>
   <a href="https://nextjs.org/"><img src="https://img.shields.io/badge/Next.js-15-black" alt="Next.js 15"/></a>
   <a href="https://ai-accelerate.devpost.com/"><img src="https://img.shields.io/badge/Hackathon-AI%20Accelerate-orange" alt="AI Accelerate Hackathon"/></a>
@@ -21,6 +21,12 @@
 ## 🎯 Overview
 
 MedSearch AI is an intelligent medical research assistant built for the **AI Accelerate Hackathon (Elastic Challenge)**. It leverages multi-agent orchestration to help healthcare professionals find, analyze, and synthesize medical research in seconds. The system combines Elasticsearch's hybrid search capabilities with Google Cloud's Vertex AI to deliver context-aware, citation-backed medical insights.
+
+### Elevator Pitch
+
+Healthcare professionals waste 15-20 hours per topic manually searching through 1.5 million annual medical publications. **MedSearch AI transforms 20 hours of research into 20 seconds of intelligent conversation.** Our multi-agent system orchestrates specialized AI agents that work in parallel to search PubMed, ClinicalTrials.gov, and FDA databases, delivering citation-backed answers with 95%+ accuracy in under 3 seconds. Built on Elasticsearch's hybrid search (BM25 + vector) and Google Vertex AI, we provide resilient, production-ready medical research synthesis that empowers better healthcare decisions, faster.
+
+📄 **Full Elevator Pitch**: [ELEVATOR_PITCH.md](ELEVATOR_PITCH.md)
 
 ---
 
@@ -56,19 +62,23 @@ MedSearch AI transforms medical research through intelligent multi-agent orchest
 
 - 🎥 **Submission Video** (≤ 3 min): [Coming Soon]
 - 🌐 **Live App**: https://medsearch.mohankrishna.site/
+- 🎤 **Elevator Pitch**: [ELEVATOR_PITCH.md](ELEVATOR_PITCH.md)
 - 📘 **Technical Details**: [TECHNICAL_DETAILS.md](TECHNICAL_DETAILS.md)
 - 🤝 **Contributing Guide**: [CONTRIBUTING.md](CONTRIBUTING.md)
+- 🛠️ **Setup Guide**: [SETUP.md](SETUP.md)
 - 📄 **Medium Post**: [Coming Soon]
 - 📄 **LinkedIn Post**: [Coming Soon]
 
 ### Key Features
 
 - 🤖 **Multi-Agent Orchestration** - Specialized agents for Research, Clinical Trials, and Drug Information
-- 🔍 **Hybrid Search** - Combines semantic (vector) and keyword (BM25) search
+- 🔍 **Hybrid Search** - Combines semantic (vector) and keyword (BM25) search with optional AI-powered reranking
 - ⚡ **Real-time Streaming** - WebSocket-based streaming responses
 - 📚 **Citation-Backed** - Every claim includes verifiable sources
 - 🎯 **High Accuracy** - 95%+ citation accuracy with confidence scores
-- 🚀 **Fast** - Sub-3-second response time
+- 🚀 **Fast** - Sub-3-second response time with Redis caching
+- 📊 **Monitoring** - Elastic APM integration for performance tracking (optional)
+- 🔄 **Resilient** - Graceful degradation with fallback mechanisms
 
 ### Data Sources
 
@@ -124,10 +134,11 @@ Enhancements enabled during the hackathon (leveraging Elastic + Google Cloud):
 **Backend:**
 - Python 3.11+ with FastAPI
 - LangGraph 0.2.x & LangChain 0.3.x for multi-agent orchestration
-- Elasticsearch 8.x for hybrid search
+- Elasticsearch 8.x for hybrid search (BM25 + vector)
 - Google Vertex AI (gemini-embedding-001 for embeddings; gemini-2.5-flash/pro for synthesis)
-- Redis for caching
+- Redis for embedding caching and search result caching
 - SQLite for agent state persistence
+- Elastic APM for application performance monitoring (optional)
 
 **Frontend:**
 - Next.js 15 (App Router) with TypeScript
@@ -137,9 +148,10 @@ Enhancements enabled during the hackathon (leveraging Elastic + Google Cloud):
 
 **Infrastructure:**
 - Google Compute Engine e2-standard-2 VM (8GB RAM, 2 vCPU)
-- Containerized services on GCE VM; Compose manifests managed on the VM (not currently in repo)
-- Nginx reverse proxy with HTTPS
+- Docker Compose for container orchestration
+- Nginx reverse proxy with HTTPS (Let's Encrypt SSL)
 - GitHub Actions for CI/CD
+- Certbot for automated SSL certificate management
 
 ### System Diagram
 
@@ -180,7 +192,7 @@ Enhancements enabled during the hackathon (leveraging Elastic + Google Cloud):
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
 ### Third-Party Licenses & Attributions
 
