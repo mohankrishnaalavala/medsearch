@@ -248,7 +248,32 @@ This project uses the following open-source libraries and services:
 - [FDA Drugs Database](https://www.fda.gov/) - Public domain (U.S. Government)
 
 ---
+## 🏆 Hackathon Submission
 
+**Event:** AI Accelerate: Unlocking New Frontiers
+**Challenge:** Elastic Challenge
+**Submission Date:** October 2025
+**Developer:** Mohan Krishna Alavala
+
+### Hackathon Requirements Compliance
+
+✅ **Google Cloud Integration** - Uses Vertex AI for embeddings (text-embedding-004) and LLM (Gemini 2.5 Flash)
+✅ **Elastic Integration** - Elasticsearch 8.15 for hybrid search (vector + BM25)
+✅ **Open Source** - MIT License, public repository
+✅ **Original Work** - Built from scratch during hackathon period
+✅ **Functional Demo** - Deployed and accessible with video demonstration
+✅ **Documentation** - Comprehensive README, setup instructions, and code comments
+
+---
+
+## 🙏 Acknowledgments
+
+- **AI Accelerate Hackathon** - For providing the platform and challenge
+- **Google Cloud** - Vertex AI platform and Gemini models
+- **Elastic** - Elasticsearch hybrid search capabilities
+- **shadcn/ui** - Beautiful, accessible UI components
+- **PubMed, ClinicalTrials.gov, FDA** - Public medical data sources
+- **Open Source Community** - For the amazing tools and libraries
 
 ---
 
