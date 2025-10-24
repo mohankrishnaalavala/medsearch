@@ -54,7 +54,7 @@ MedSearch AI transforms medical research through intelligent multi-agent orchest
 
 ### Demo Links
 
-- 🎥 **Submission Video** : [Demo Video](https://youtu.be/DsW-9sLTT6A)
+- 🎥 **Submission Video**(≤3 minutes) : [Demo Video](https://youtu.be/k4eIx1Nxv-0)
 - 🌐 **Live App**: https://medsearch.mohankrishna.site/
 - 📘 **Technical Details**: [TECHNICAL_DETAILS.md](TECHNICAL_DETAILS.md)
 - 🤝 **Contributing Guide**: [CONTRIBUTING.md](CONTRIBUTING.md)
