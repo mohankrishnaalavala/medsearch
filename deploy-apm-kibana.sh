@@ -34,17 +34,17 @@ echo ""
 
 # Step 3: Check if updated docker-compose.prod.yml exists
 echo -e "${YELLOW}Step 3: Checking for updated docker-compose.prod.yml...${NC}"
-if [ ! -f "internal_docs/docker-compose.prod.yml" ]; then
-    echo -e "${RED}Error: internal_docs/docker-compose.prod.yml not found!${NC}"
+if [ ! -f "docker-compose.prod.yml" ]; then
+    echo -e "${RED}Error: docker-compose.prod.yml not found!${NC}"
     echo "Please pull the latest code first: git pull origin develop"
     exit 1
 fi
-echo -e "${GREEN}✓ Found internal_docs/docker-compose.prod.yml${NC}"
+echo -e "${GREEN}✓ Found docker-compose.prod.yml${NC}"
 echo ""
 
 # Step 4: Copy updated docker-compose
 echo -e "${YELLOW}Step 4: Updating docker-compose.yml with APM and Kibana...${NC}"
-cp internal_docs/docker-compose.prod.yml docker-compose.yml
+cp docker-compose.prod.yml docker-compose.yml
 echo -e "${GREEN}✓ docker-compose.yml updated${NC}"
 echo ""
 

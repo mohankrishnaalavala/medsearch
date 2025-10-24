@@ -22,11 +22,11 @@ echo ""
 
 # Copy updated docker-compose
 echo "Updating docker-compose.yml..."
-if [ -f "internal_docs/docker-compose.prod.yml" ]; then
-    cp internal_docs/docker-compose.prod.yml docker-compose.yml
+if [ -f "docker-compose.prod.yml" ]; then
+    cp docker-compose.prod.yml docker-compose.yml
     echo "✓ docker-compose.yml updated"
 else
-    echo "Error: internal_docs/docker-compose.prod.yml not found"
+    echo "Error: docker-compose.prod.yml not found"
     exit 1
 fi
 echo ""
