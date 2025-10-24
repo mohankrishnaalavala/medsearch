@@ -56,7 +56,6 @@ MedSearch AI transforms medical research through intelligent multi-agent orchest
 
 - 🎥 **Submission Video** (≤ 3 min): [Coming Soon]
 - 🌐 **Live App**: https://medsearch.mohankrishna.site/
-- 🎤 **Elevator Pitch**: [ELEVATOR_PITCH.md](ELEVATOR_PITCH.md)
 - 📘 **Technical Details**: [TECHNICAL_DETAILS.md](TECHNICAL_DETAILS.md)
 - 🤝 **Contributing Guide**: [CONTRIBUTING.md](CONTRIBUTING.md)
 - 🛠️ **Setup Guide**: [SETUP.md](SETUP.md)
@@ -90,6 +89,7 @@ MedSearch AI transforms medical research through intelligent multi-agent orchest
    - "What are the latest treatments for Type 2 diabetes in elderly patients?"
    - "what is Dapagliflozin in Heart Failure with Preserved Ejection Fraction (DELIVER)?"
    - "metformin side effects in elders?"
+   - "Compare GLP-1 vs SGLT2 for T2D in CKD stage 3?"
 4. Observe streaming updates (research → clinical → drug → synthesis) in a few seconds.
 5. Verify the final answer includes citations; expand them to view titles, journal/phase/status, and dates.
 6. Ask a follow-up question to see conversation context retention.
@@ -100,12 +100,12 @@ MedSearch AI transforms medical research through intelligent multi-agent orchest
 
 How these two platforms directly helped this project ship fast with quality:
 
-- Elasticsearch
+- **Elasticsearch**
   - Hybrid retrieval (BM25 + vector) delivered strong precision and semantic recall for medical content
   - Per-source indices (PubMed, ClinicalTrials, Drugs) enabled specialized scoring and filters (dates, phases, study types)
   - Simple mappings and stable APIs let us iterate quickly from prototype to production
   - Enabled future growth: same query model scales from local dev to larger clusters without code changes
-- Google Cloud (Vertex AI + Compute Engine)
+- **Google Cloud (Vertex AI + Compute Engine)**
   - Vertex AI gemini-embedding-001 powered our semantic search vectors with low latency and great quality
   - Gemini Flash enabled fast synthesis and utility prompts (routing, summarization), keeping responses concise and cited
   - Service accounts + IAM kept secrets and access scoped properly without custom infra
